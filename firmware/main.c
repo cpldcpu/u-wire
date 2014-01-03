@@ -13,6 +13,8 @@
 #include <avr/boot.h>
 #include <util/delay.h>
 
+#define usbMsgPtr_t uint8_t
+
 #include "bootloaderconfig.h"
 #include "usbdrv/usbdrv.c"
 
@@ -71,11 +73,25 @@ inline void ws2812_sendarray_mask(uint8_t *data,uint8_t datlen)
 	}
 } 
 
+/* We use if() instead of #if in the macro below because #if can't be used
+ * in macros and the compiler optimizes constant conditions anyway.
+ * This may cause problems with undefined symbols if compiled without
+ * optimizing!
+ */
+#define GET_DESCRIPTOR(cfgProp, staticName) \
+  if(cfgProp){                              \
+    len = USB_PROP_LENGTH(cfgProp);         \
+    usbMsgPtr = (usbMsgPtr_t)(staticName);  \
+  }
+
+  uint8_t  FlashMsgPtrLow; // Low byte of message pointer.
+    
 /* ------------------------------------------------------------------------ */
 int main(void) __attribute__((__noreturn__));
 int main(void) {
   usbMsgLen_t  usbMsgLen; /* remaining number of bytes */
-//  usbMsgPtr_t  usbMsgPtr;  
+  usbMsgPtr_t  usbMsgPtr;  
+  
   usbDeviceDisconnect();  /* do this while interrupts are disabled */
   _delay_ms(500);  
   usbDeviceConnect();
@@ -129,34 +145,49 @@ int main(void) {
           ws2812_sendarray_mask(&data[3],3);        
           sei();
           replyLen=0;
+    /*      little-wire version reply
+          	if( req == 34 ) // This has to be hardcoded to 34!
+              {
+                data[0]=LITTLE_WIRE_VERSION;
+                usbMsgPtr = data;
+                return 1;		
+              } 
+  */
         }else{   // standard requests are handled by driver 
           
           usbMsgLen_t len = 0;
-          uchar   *dataPtr = usbTxBuf + 9;    /* there are 2 bytes free space at the end of the buffer */
           uchar   value = rq->wValue.bytes[0];
 
-              dataPtr[0] = 0; /* default reply common to USBRQ_GET_STATUS and USBRQ_GET_INTERFACE */
               SWITCH_START(rq->bRequest)
               SWITCH_CASE(USBRQ_GET_STATUS)           /* 0 */
                   uchar recipient = rq->bmRequestType & USBRQ_RCPT_MASK;  /* assign arith ops to variables to enforce byte size */     
-                  dataPtr[1] = 0;
                   len = 2;
               SWITCH_CASE(USBRQ_SET_ADDRESS)          /* 5 */
                   usbNewDeviceAddr = value;
               SWITCH_CASE(USBRQ_GET_DESCRIPTOR)       /* 6 */
-                  len = usbDriverDescriptor(rq);
-                  goto skipMsgPtrAssignment;
-              SWITCH_CASE(USBRQ_GET_CONFIGURATION)    /* 8 */
-                  dataPtr = &usbConfiguration;  /* send current configuration value */
-                  len = 1;
-              SWITCH_CASE(USBRQ_SET_CONFIGURATION)    /* 9 */
-                  usbConfiguration = value;
+                SWITCH_START(rq->wValue.bytes[1])
+                SWITCH_CASE(USBDESCR_DEVICE)    /* 1 */
+                    GET_DESCRIPTOR(USB_CFG_DESCR_PROPS_DEVICE, usbDescriptorDevice)
+                SWITCH_CASE(USBDESCR_CONFIG)    /* 2 */
+                    GET_DESCRIPTOR(USB_CFG_DESCR_PROPS_CONFIGURATION, usbDescriptorConfiguration)
+                SWITCH_CASE(USBDESCR_STRING)    /* 3 */
+                    SWITCH_START(rq->wValue.bytes[0])
+                    SWITCH_CASE(0)
+                        GET_DESCRIPTOR(USB_CFG_DESCR_PROPS_STRING_0, usbDescriptorString0)
+                    SWITCH_CASE(1)
+                        GET_DESCRIPTOR(USB_CFG_DESCR_PROPS_STRING_VENDOR, usbDescriptorStringVendor)
+                    SWITCH_CASE(2)
+                        GET_DESCRIPTOR(USB_CFG_DESCR_PROPS_STRING_PRODUCT, usbDescriptorStringDevice)
+                    SWITCH_CASE(3)
+                        GET_DESCRIPTOR(USB_CFG_DESCR_PROPS_STRING_SERIAL_NUMBER, usbDescriptorStringSerialNumber)
+                    SWITCH_DEFAULT
+                    SWITCH_END
+                SWITCH_DEFAULT
+                SWITCH_END
               SWITCH_CASE(USBRQ_GET_INTERFACE)        /* 10 */
                   len = 1;
               SWITCH_DEFAULT                          /* 7=SET_DESCRIPTOR, 12=SYNC_FRAME */
               SWITCH_END
-              usbMsgPtr = (usbMsgPtr_t)dataPtr;
-            skipMsgPtrAssignment:
             replyLen=len;
           if(replyLen > rq->wLength.bytes[0])   
               replyLen = rq->wLength.bytes[0];
@@ -178,6 +209,8 @@ int main(void) {
           {   
             uchar i = wantLen;
             usbMsgPtr_t r = usbMsgPtr;
+       //     uint8_t *r = (uint8_t*)FlashMsgPtrLow;
+             
             uint8_t     *data=usbTxBuf + 1;  
             
             while (i--)  /* don't bother app with 0 sized reads */
@@ -186,8 +219,9 @@ int main(void) {
                 *data++ = c;
                 r++;
             }    
-            
             usbMsgPtr = r;
+            
+//            FlashMsgPtrLow = (uint8_t)r;
           }
           
           usbCrc16Append(&usbTxBuf[1], wantLen);
@@ -200,3 +234,37 @@ int main(void) {
     }
   } while(1);  
 }
+
+#if 0
+
+
+/* usbDriverDescriptor() is similar to usbFunctionDescriptor(), but used
+ * internally for all types of descriptors.
+ */
+static inline usbMsgLen_t usbDriverDescriptor(usbRequest_t *rq)
+{
+usbMsgLen_t len = 0;
+
+    SWITCH_START(rq->wValue.bytes[1])
+    SWITCH_CASE(USBDESCR_DEVICE)    /* 1 */
+        GET_DESCRIPTOR(USB_CFG_DESCR_PROPS_DEVICE, usbDescriptorDevice)
+    SWITCH_CASE(USBDESCR_CONFIG)    /* 2 */
+        GET_DESCRIPTOR(USB_CFG_DESCR_PROPS_CONFIGURATION, usbDescriptorConfiguration)
+    SWITCH_CASE(USBDESCR_STRING)    /* 3 */
+        SWITCH_START(rq->wValue.bytes[0])
+        SWITCH_CASE(0)
+            GET_DESCRIPTOR(USB_CFG_DESCR_PROPS_STRING_0, usbDescriptorString0)
+        SWITCH_CASE(1)
+            GET_DESCRIPTOR(USB_CFG_DESCR_PROPS_STRING_VENDOR, usbDescriptorStringVendor)
+        SWITCH_CASE(2)
+            GET_DESCRIPTOR(USB_CFG_DESCR_PROPS_STRING_PRODUCT, usbDescriptorStringDevice)
+        SWITCH_CASE(3)
+            GET_DESCRIPTOR(USB_CFG_DESCR_PROPS_STRING_SERIAL_NUMBER, usbDescriptorStringSerialNumber)
+        SWITCH_DEFAULT
+
+        SWITCH_END
+    SWITCH_DEFAULT
+    SWITCH_END
+    return len;
+}
+#endif

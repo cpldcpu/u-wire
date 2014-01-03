@@ -23,7 +23,7 @@ uchar usbRxBuf[2*USB_BUFSIZE];  /* raw RX buffer: PID, 8 bytes data, 2 bytes CRC
 uchar       usbInputBufOffset;  /* offset in usbRxBuf used for low level receiving */
 uchar       usbDeviceAddr;      /* assigned during enumeration, defaults to 0 */
 uchar       usbNewDeviceAddr;   /* device ID which should be set after status phase */
-uchar       usbConfiguration;   /* currently selected configuration. Administered by driver, but not used */
+//uchar       usbConfiguration;   /* currently selected configuration. Administered by driver, but not used */
 volatile schar usbRxLen;        /* = 0; number of bytes in usbRxBuf; 0 means free, -1 for flow control */
 uchar       usbCurrentTok;      /* last token received or endpoint number for last OUT token if != 0 */
 uchar       usbRxToken;         /* token for data we received; or endpont number for last OUT */
@@ -43,6 +43,7 @@ uchar       usbCurrentDataToken;/* when we check data toggling to ignore duplica
 #endif
 
 /* USB status registers / not shared with asm code */
+
 usbMsgPtr_t         usbMsgPtr;      /* data to transmit next -- ROM or RAM address */
 static usbMsgLen_t  usbMsgLen; /* remaining number of bytes */
 static uchar        usbMsgFlags;    /* flag values see below */
@@ -348,7 +349,7 @@ uchar       flags = USB_FLG_MSGPTR_IS_ROM;
             len = usbFunctionDescriptor(rq);
         }
     SWITCH_END
-    usbMsgFlags = flags;
+  //  usbMsgFlags = flags;
     return len;
 }
 
@@ -562,69 +563,3 @@ uchar           isReset = !notResetState;
     notResetState = notResetState;  // avoid compiler warning
 #endif
 }
-
-/* ------------------------------------------------------------------------- */
-
-USB_PUBLIC void usbPoll(void)
-{
-schar   len;
-uchar   i;
-
-    len = usbRxLen - 3;
-    if(len >= 0){
-/* We could check CRC16 here -- but ACK has already been sent anyway. If you
- * need data integrity checks with this driver, check the CRC in your app
- * code and report errors back to the host. Since the ACK was already sent,
- * retries must be handled on application level.
- * unsigned crc = usbCrc16(buffer + 1, usbRxLen - 3);
- */
-        usbProcessRx(usbRxBuf + USB_BUFSIZE + 1 - usbInputBufOffset, len);
-#if USB_CFG_HAVE_FLOWCONTROL
-        if(usbRxLen > 0)    /* only mark as available if not inactivated */
-            usbRxLen = 0;
-#else
-        usbRxLen = 0;       /* mark rx buffer as available */
-#endif
-    }
-    if(usbTxLen & 0x10){    /* transmit system idle */
-        if(usbMsgLen != USB_NO_MSG){    /* transmit data pending? */
-            usbBuildTxBlock();
-        }
-    }
-    for(i = 20; i > 0; i--){
-        uchar usbLineStatus = USBIN & USBMASK;
-        if(usbLineStatus != 0)  /* SE0 has ended */
-            goto isNotReset;
-    }
-    /* RESET condition, called multiple times during reset */
-    usbNewDeviceAddr = 0;
-    usbDeviceAddr = 0;
-    usbResetStall();
-    DBG1(0xff, 0, 0);
-isNotReset:
-    usbHandleResetHook(i);
-}
-
-/* ------------------------------------------------------------------------- */
-
-USB_PUBLIC void usbInit(void)
-{
-    usbTxLen = USBPID_NAK;
-    usbMsgLen = USB_NO_MSG;
-#if USB_INTR_CFG_SET != 0
-    USB_INTR_CFG |= USB_INTR_CFG_SET;
-#endif
-#if USB_INTR_CFG_CLR != 0
-    USB_INTR_CFG &= ~(USB_INTR_CFG_CLR);
-#endif
-    USB_INTR_ENABLE |= (1 << USB_INTR_ENABLE_BIT);
-    usbResetDataToggling();
-#if USB_CFG_HAVE_INTRIN_ENDPOINT && !USB_CFG_SUPPRESS_INTR_CODE
-    usbTxLen1 = USBPID_NAK;
-#if USB_CFG_HAVE_INTRIN_ENDPOINT3
-    usbTxLen3 = USBPID_NAK;
-#endif
-#endif
-}
-
-/* ------------------------------------------------------------------------- */
