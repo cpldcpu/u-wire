@@ -2,6 +2,7 @@ software/*.exe
 software/*.o
 firmware/*.o
 firmware/*.hex
+firmware/*.bin
 firmware/*.lst
 firmware/*.lss
 firmware/*.map
