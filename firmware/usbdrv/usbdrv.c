@@ -21,6 +21,7 @@ documentation of the entire driver.
 /* raw USB registers / interface to assembler code: */
 //uchar usbRxBuf[2*USB_BUFSIZE];  /* raw RX buffer: PID, 8 bytes data, 2 bytes CRC */
 uchar usbRxBuf[USB_BUFSIZE];  /* raw RX buffer: PID, 8 bytes data, 2 bytes CRC */ //<- only use half the rx buf
+uchar       usbTxBuf[USB_BUFSIZE];/* data to transmit with next IN, free if usbTxLen contains handshake token */
 uchar       usbInputBufOffset;  /* offset in usbRxBuf used for low level receiving */
 uchar       usbDeviceAddr;      /* assigned during enumeration, defaults to 0 */
 uchar       usbNewDeviceAddr;   /* device ID which should be set after status phase */
@@ -29,7 +30,6 @@ volatile schar usbRxLen;        /* = 0; number of bytes in usbRxBuf; 0 means fre
 uchar       usbCurrentTok;      /* last token received or endpoint number for last OUT token if != 0 */
 uchar       usbRxToken;         /* token for data we received; or endpont number for last OUT */
 volatile uchar usbTxLen;   /* number of bytes to transmit with next IN token or handshake token */
-uchar       usbTxBuf[USB_BUFSIZE];/* data to transmit with next IN, free if usbTxLen contains handshake token */
 
 #define USB_FLG_MSGPTR_IS_ROM   (1<<6)
 #define USB_FLG_USE_USER_RW     (1<<7)
@@ -46,6 +46,7 @@ optimizing hints:
 
 #if USB_CFG_DESCR_PROPS_STRINGS == 0
 
+#if 0   // No DecriptorSting0
 #if USB_CFG_DESCR_PROPS_STRING_0 == 0
 #undef USB_CFG_DESCR_PROPS_STRING_0
 #define USB_CFG_DESCR_PROPS_STRING_0    sizeof(usbDescriptorString0)
@@ -54,6 +55,7 @@ PROGMEM const char usbDescriptorString0[] = { /* language descriptor */
     3,          /* descriptor type */
     0x09, 0x04, /* language index (0x0409 = US-English) */
 };
+#endif
 #endif
 
 #if USB_CFG_DESCR_PROPS_STRING_VENDOR == 0 && USB_CFG_VENDOR_NAME_LEN
@@ -173,7 +175,6 @@ PROGMEM const char usbDescriptorConfiguration[] = {    /* USB configuration desc
 #endif
 };
 #endif
-
 /* ------------------------------------------------------------------------- */
 
 

@@ -15,7 +15,6 @@
 
 #define usbMsgPtr_t uint8_t
 
-#include "bootloaderconfig.h"
 #include "usbdrv/usbdrv.c"
 
 #define ws2812_mask _BV(PB0)
@@ -125,7 +124,8 @@ int main(void) {
 
     len = usbRxLen - 3;
     if(len >= 0){
-      uint8_t *data=(uint8_t *)usbRxBuf + USB_BUFSIZE + 1 - usbInputBufOffset;
+//      uint8_t *data=(uint8_t *)usbRxBuf + USB_BUFSIZE + 1 - usbInputBufOffset;
+     uint8_t *data=(uint8_t *)usbRxBuf + 1 ;
       usbRequest_t    *rq = (void *)data;   
       /* usbRxToken can be:
        * 0x2d 00101101 (USBPID_SETUP for setup data)
