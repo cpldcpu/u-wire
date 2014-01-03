@@ -39,38 +39,37 @@ inline void ws2812_sendarray_mask(uint8_t *data,uint8_t datlen)
   maskhi |=ws2812_port;
 
 	while (datlen--) {
-		curbyte=*data++;
+    curbyte=*data++;
 
-		
-		asm volatile(
-		
-		"		ldi	%0,8		\n\t"		// 0
-		"loop%=:out	%2,	%3		\n\t"		// 1
-		"		lsl	%1			\n\t"		// 2
-		"		dec	%0			\n\t"		// 3
+    asm volatile(
 
-		"		rjmp .+0		\n\t"		// 5
-		
-		"		brcs .+2		\n\t"		// 6l / 7h
-		"		out	%2,	%4		\n\t"		// 7l / -
+    "   ldi %0,8		\n\t"		// 0
+    "loop%=:out	%2,	%3		\n\t"		// 1
+    "   lsl	%1			\n\t"		// 2
+    "   dec	%0			\n\t"		// 3
 
-		"		rjmp .+0		\n\t"		// 9
-		
-		"		nop				\n\t"		// 10
-		"		out	%2,	%4		\n\t"		// 11
-		"		breq end%=		\n\t"		// 12      nt. 13 taken
+    "   rjmp .+0		\n\t"		// 5
 
-		"		rjmp .+0		\n\t"		// 14
-		"		rjmp .+0		\n\t"		// 16
-		"		rjmp .+0		\n\t"		// 18
-		"		rjmp loop%=		\n\t"		// 20
-		"end%=:					\n\t"
-		:	"=&d" (ctr)
-		:	"r" (curbyte), "I" (_SFR_IO_ADDR(ws2812_port)), "r" (maskhi), "r" (masklo)
-		);
-		
-		// loop overhead including byte load is 6+1 cycles
-	}
+    "   brcs .+2		\n\t"		// 6l / 7h
+    "   out	%2,	%4		\n\t"		// 7l / -
+
+    "   rjmp .+0		\n\t"		// 9
+
+    "   nop				\n\t"		// 10
+    "   out	%2,	%4		\n\t"		// 11
+    "   breq end%=		\n\t"		// 12      nt. 13 taken
+
+    "   rjmp .+0		\n\t"		// 14
+    "   rjmp .+0		\n\t"		// 16
+    "   rjmp .+0		\n\t"		// 18
+    "   rjmp loop%=		\n\t"		// 20
+    "end%=:					\n\t"
+    :	"=&d" (ctr)
+    :	"r" (curbyte), "I" (_SFR_IO_ADDR(ws2812_port)), "r" (maskhi), "r" (masklo)
+    );
+
+    // loop overhead including byte load is 6+1 cycles
+  }
 } 
 
 /* We use if() instead of #if in the macro below because #if can't be used
@@ -207,22 +206,33 @@ int main(void) {
             usbMsgLen = USB_NO_MSG;
           }
           
-          usbTxBuf[0] ^= USBPID_DATA0 ^ USBPID_DATA1; /* DATA toggling */
 
           {   
-            uchar i = wantLen;
-            usbMsgPtr_t r = usbMsgPtr;
-             
-            uint8_t     *data=usbTxBuf + 1;  
-            
-            while (i--)  /* don't bother app with 0 sized reads */
+            uint8_t i,c;
+            usbMsgPtr_t r = usbMsgPtr;             
+            uint8_t     *data=usbTxBuf + 1;
+
+        // *data++ ^= USBPID_DATA0 ^ USBPID_DATA1; // DATA toggling 
+        //  AVR-GCC 4.7.2 is too stupid to optimize this
+        
+            asm volatile(
+            "         ld %0,-X    \n\t"        
+            "         eor %0,%2   \n\t"        
+            "         st  X+,%0  \n\t"   
+            : "=&d" (c)
+            :  "x" (data), "r" ((uint8_t)(USBPID_DATA0 ^ USBPID_DATA1))
+            );            
+
+            i=wantLen;
+            while (i--)  // don't bother app with 0 sized reads 
             { 
-                uchar c = USB_READ_FLASH(r);    /* assign to char size variable to enforce byte ops */
+                c = USB_READ_FLASH(r);    // assign to char size variable to enforce byte ops 
                 *data++ = c;
                 r++;
             }    
-            usbMsgPtr = r;
           }
+          
+          usbMsgPtr += wantLen;            
           
           usbCrc16Append(&usbTxBuf[1], wantLen);
           wantLen += 4;           /* length including sync byte */
