@@ -35,12 +35,13 @@ static uint8_t usbFunctionSetup(uint8_t data[8]);
 
 inline void ws2812_sendarray_mask(uint8_t *data,uint8_t datlen)
 {
-	uint8_t curbyte,ctr,masklo,maskhi=ws2812_mask;
-	masklo	=~maskhi&ws2812_port;
-	maskhi |=ws2812_port;
-	
+  uint8_t curbyte,ctr,masklo,maskhi=ws2812_mask;
+  masklo	=~maskhi&ws2812_port;
+  maskhi |=ws2812_port;
+
 	while (datlen--) {
 		curbyte=*data++;
+
 		
 		asm volatile(
 		
@@ -83,8 +84,6 @@ inline void ws2812_sendarray_mask(uint8_t *data,uint8_t datlen)
     len = USB_PROP_LENGTH(cfgProp);         \
     usbMsgPtr = (usbMsgPtr_t)(staticName);  \
   }
-
-  uint8_t  FlashMsgPtrLow; // Low byte of message pointer.
     
 /* ------------------------------------------------------------------------ */
 int main(void) __attribute__((__noreturn__));

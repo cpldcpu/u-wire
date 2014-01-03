@@ -19,7 +19,8 @@ documentation of the entire driver.
 /* ------------------------------------------------------------------------- */
 
 /* raw USB registers / interface to assembler code: */
-uchar usbRxBuf[2*USB_BUFSIZE];  /* raw RX buffer: PID, 8 bytes data, 2 bytes CRC */
+//uchar usbRxBuf[2*USB_BUFSIZE];  /* raw RX buffer: PID, 8 bytes data, 2 bytes CRC */
+uchar usbRxBuf[USB_BUFSIZE];  /* raw RX buffer: PID, 8 bytes data, 2 bytes CRC */ //<- only use half the rx buf
 uchar       usbInputBufOffset;  /* offset in usbRxBuf used for low level receiving */
 uchar       usbDeviceAddr;      /* assigned during enumeration, defaults to 0 */
 uchar       usbNewDeviceAddr;   /* device ID which should be set after status phase */
@@ -29,19 +30,6 @@ uchar       usbCurrentTok;      /* last token received or endpoint number for la
 uchar       usbRxToken;         /* token for data we received; or endpont number for last OUT */
 volatile uchar usbTxLen;   /* number of bytes to transmit with next IN token or handshake token */
 uchar       usbTxBuf[USB_BUFSIZE];/* data to transmit with next IN, free if usbTxLen contains handshake token */
-#if USB_COUNT_SOF
-volatile uchar  usbSofCount;    /* incremented by assembler module every SOF */
-#endif
-#if USB_CFG_HAVE_INTRIN_ENDPOINT && !USB_CFG_SUPPRESS_INTR_CODE
-usbTxStatus_t  usbTxStatus1;
-#   if USB_CFG_HAVE_INTRIN_ENDPOINT3
-usbTxStatus_t  usbTxStatus3;
-#   endif
-#endif
-#if USB_CFG_CHECK_DATA_TOGGLING
-uchar       usbCurrentDataToken;/* when we check data toggling to ignore duplicate packets */
-#endif
-
 
 #define USB_FLG_MSGPTR_IS_ROM   (1<<6)
 #define USB_FLG_USE_USER_RW     (1<<7)
