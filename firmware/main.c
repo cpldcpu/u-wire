@@ -234,37 +234,3 @@ int main(void) {
     }
   } while(1);  
 }
-
-#if 0
-
-
-/* usbDriverDescriptor() is similar to usbFunctionDescriptor(), but used
- * internally for all types of descriptors.
- */
-static inline usbMsgLen_t usbDriverDescriptor(usbRequest_t *rq)
-{
-usbMsgLen_t len = 0;
-
-    SWITCH_START(rq->wValue.bytes[1])
-    SWITCH_CASE(USBDESCR_DEVICE)    /* 1 */
-        GET_DESCRIPTOR(USB_CFG_DESCR_PROPS_DEVICE, usbDescriptorDevice)
-    SWITCH_CASE(USBDESCR_CONFIG)    /* 2 */
-        GET_DESCRIPTOR(USB_CFG_DESCR_PROPS_CONFIGURATION, usbDescriptorConfiguration)
-    SWITCH_CASE(USBDESCR_STRING)    /* 3 */
-        SWITCH_START(rq->wValue.bytes[0])
-        SWITCH_CASE(0)
-            GET_DESCRIPTOR(USB_CFG_DESCR_PROPS_STRING_0, usbDescriptorString0)
-        SWITCH_CASE(1)
-            GET_DESCRIPTOR(USB_CFG_DESCR_PROPS_STRING_VENDOR, usbDescriptorStringVendor)
-        SWITCH_CASE(2)
-            GET_DESCRIPTOR(USB_CFG_DESCR_PROPS_STRING_PRODUCT, usbDescriptorStringDevice)
-        SWITCH_CASE(3)
-            GET_DESCRIPTOR(USB_CFG_DESCR_PROPS_STRING_SERIAL_NUMBER, usbDescriptorStringSerialNumber)
-        SWITCH_DEFAULT
-
-        SWITCH_END
-    SWITCH_DEFAULT
-    SWITCH_END
-    return len;
-}
-#endif
