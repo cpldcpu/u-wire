@@ -208,7 +208,6 @@ int main(void) {
           {   
             uchar i = wantLen;
             usbMsgPtr_t r = usbMsgPtr;
-       //     uint8_t *r = (uint8_t*)FlashMsgPtrLow;
              
             uint8_t     *data=usbTxBuf + 1;  
             
@@ -219,8 +218,6 @@ int main(void) {
                 r++;
             }    
             usbMsgPtr = r;
-            
-//            FlashMsgPtrLow = (uint8_t)r;
           }
           
           usbCrc16Append(&usbTxBuf[1], wantLen);

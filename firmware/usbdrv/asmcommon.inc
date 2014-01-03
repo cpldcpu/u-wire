@@ -113,8 +113,11 @@ handleData:
     brne    sendNakAndReti      ;[25]
 ; 2006-03-11: The following two lines fix a problem where the device was not
 ; recognized if usbPoll() was called less frequently than once every 4 ms.
-    cpi     cnt, 4              ;[26] zero sized data packets are status phase only -- ignore and ack
-    brmi    sendAckAndReti      ;[27] keep rx buffer clean -- we must not NAK next SETUP
+
+;   The commented out code is not needed with fast polling
+
+;    cpi     cnt, 4              ;[26] zero sized data packets are status phase only -- ignore and ack
+;    brmi    sendAckAndReti      ;[27] keep rx buffer clean -- we must not NAK next SETUP
 #if USB_CFG_CHECK_DATA_TOGGLING
     sts     usbCurrentDataToken, token  ; store for checking by C code
 #endif
