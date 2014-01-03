@@ -109,7 +109,7 @@ int main(void) {
   // Dangerous hack:
   // We assume that the next low level on D- is the host-issued reset. This will
   // be detected as the first pulse in the calibrate osc-routine, forcing it to
-  // search for and oscall value above 128. This is true for the ATtiny85 and >16Mhz,
+  // search for an osccal value above 128. This is true for the ATtiny85 and >16Mhz,
   // but may break under other circumstances. 
   // Note: This seems to be a bug in all V-USB implementations with osccal.
   // This approach may also fail if the device is powered while it is reconnected
@@ -199,10 +199,14 @@ int main(void) {
         if(usbMsgLen != USB_NO_MSG){    /* transmit data pending? */
           usbMsgLen_t wantLen=usbMsgLen;
           
-          if(wantLen > 8)
+          if(wantLen > 8) {
               wantLen = 8;
-              
-          usbMsgLen -= wantLen;
+              usbMsgLen -= wantLen;
+          }
+          else {  // end of message reached
+            usbMsgLen = USB_NO_MSG;
+          }
+          
           usbTxBuf[0] ^= USBPID_DATA0 ^ USBPID_DATA1; /* DATA toggling */
 
           {   
@@ -222,8 +226,6 @@ int main(void) {
           
           usbCrc16Append(&usbTxBuf[1], wantLen);
           wantLen += 4;           /* length including sync byte */
-          if(wantLen < 12)        /* a partial package identifies end of message */
-              usbMsgLen = USB_NO_MSG;
 
           usbTxLen = wantLen;
         }
