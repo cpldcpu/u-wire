@@ -2,7 +2,7 @@
  * µ-wire
  * cpldcpu Jan 2014
  * 
- * Smallest possible USB Complaint device based on V-USB
+ * Smallest possible USB compliant device based on V-USB
  *
  * (Uses little-wire host-code and a stripped down micronucleus)
  */
