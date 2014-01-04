@@ -1,6 +1,14 @@
 /* Name: osccalASM.S
  * Author: cpldcpu@gmail.com
  * Creation Date: 2013-11-3
+ 
+ 
+ * Update       : 2014-01-4
+ * Added initial sync-state, which will discard the first delay measurement. 
+ * This allows to call this routine before or during the SE0 bus reset without 
+ * corrupting OSCCAL.
+ * Removed CLI/SEI to allow more flexibility.
+ * 
  * Tabsize: 4
  * License: GNU GPL v2 (see License.txt), GNU GPL v3 or proprietary (CommercialLicense.txt)
  */
@@ -90,25 +98,25 @@
 .global calibrateOscillatorASM
 calibrateOscillatorASM:
 
-	ldi		opD, 255	
+  ldi   opD, 255
 
-	ldi		try, 128	; calibration start value
-	ldi		stp, 64		; initial step width
-	ldi		i, 10		; 10 iterations
+  ldi   try, 128    ; calibration start value
+  ldi   stp, 0      ; initial step width=0 for sync phase (first delay is discarded)
+  ldi   i, 11       ; 11 iterations (1x sync, 7x binary search, 3x neighbourhood)
 
 usbCOloop:
 
-	out		OSCCAL, try
-	nop
+  out		OSCCAL, try
+  nop
 
-	; Delay values = F_CPU * 999e-6 / 5 + 0.5
-	
+  ; Delay values = F_CPU * 999e-6 / 5 + 0.5
+  
 #if (F_CPU == 16500000)
-	ldi		cnt16L, lo8(3297)
-	ldi		cnt16H, hi8(3297)
+  ldi   cnt16L, lo8(3297)
+  ldi   cnt16H, hi8(3297)
 #elif (F_CPU == 12800000)
-	ldi		cnt16L, lo8(2557)
-	ldi		cnt16H, hi8(2557)
+  ldi   cnt16L, lo8(2557)
+  ldi   cnt16H, hi8(2557)
 #elif (F_CPU == 12000000)
   ldi   cnt16L, lo8(2398)
   ldi   cnt16H, hi8(2398)
@@ -138,22 +146,27 @@ usbCOWaitLoop:
 usbCOclocktoolow:
 	add		try, stp
 usbCOclocktoohigh:
-	lsr		stp
-	brne	usbCOnoneighborhoodsearch
+	lsr		stp                ; stp = 0 in first iteration (sync)
+                           ; stp = 2^x (x=0..6) during binary search, 
+                           ; stp = 1 during neighbourhood search                          
+                           
+	brne	usbCObinarysearch
+  ldi   stp, 64            ; stp=64 to initiate binary search. 
+                           ; If we are in neighbourhood search (c=1), it is changed to 1 below
+  brcc  usbCObinarysearch
 	cp		opD, cnt16L
 	brcs	usbCOnoimprovement
 	in		opV, OSCCAL
 	mov		opD, cnt16L
 usbCOnoimprovement:
-	ldi		stp, 1
-usbCOnoneighborhoodsearch:
+	ldi		stp, 1             ; stp=1 to continue with neighbourhood search
+usbCObinarysearch:  
 	subi	i, 1
 	brne	usbCOloop
 
 	out		OSCCAL, opV
 	nop
-	sei
-    ret
+  ret
 
 #undef i
 #undef opV
