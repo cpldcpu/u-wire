@@ -153,17 +153,17 @@ OBJECTS += osccalASM.o
 all: main.hex
 
 .c.o:
-	$(CC) $(CFLAGS) -c $< -o $@ -Wa,-ahls=$<.lst
+	@$(CC) $(CFLAGS) -c $< -o $@ -Wa,-ahls=$<.lst
 
 .S.o:
-	$(CC) $(CFLAGS) -x assembler-with-cpp -c $< -o $@
+	@$(CC) $(CFLAGS) -x assembler-with-cpp -c $< -o $@
 # "-x assembler-with-cpp" should not be necessary since this is the default
 # file type for the .S (with capital S) extension. However, upper case
 # characters are not always preserved on Windows. To ensure WinAVR
 # compatibility define the file type manually.
 
 .c.s:
-	$(CC) $(CFLAGS) -S $< -o $@
+	@$(CC) $(CFLAGS) -S $< -o $@
 
 flash:	all
 	$(AVRDUDE) -U flash:w:main.hex:i -B 10
@@ -188,13 +188,13 @@ clean:
 
 # file targets:
 main.bin:	$(OBJECTS)
-	$(CC) $(CFLAGS) -o main.bin $(OBJECTS) $(LDFLAGS)
+	@$(CC) $(CFLAGS) -o main.bin $(OBJECTS) $(LDFLAGS)
+	@avr-size main.bin
 
 main.hex:	main.bin
-	rm -f main.hex main.eep.hex
-	avr-objcopy -j .text  -j .data -O ihex main.bin main.hex
-	avr-size main.hex
-
+	@rm -f main.hex main.eep.hex
+	@avr-objcopy -j .text  -j .data -O ihex main.bin main.hex
+	
 disasm:	main.bin
 	avr-objdump -d -S main.bin >main.lss
 
