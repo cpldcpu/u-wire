@@ -14,7 +14,7 @@
 #     make lock    			# to protect the boot loader from overwriting
 #     make disablereset		# for ATtiny85 target - to use external reset line for IO (CAUTION: this is not easy to enable again, see README) 
 
-F_CPU = 16000000
+F_CPU = 12000000
 DEVICE = attiny85
 FUSEOPT = $(FUSEOPT_t85)
 LOCKOPT = -U lock:w:0x2f:m

@@ -1,13 +1,7 @@
-/* Name: osccalASM.S
+/* Name: osccalASM.S   v1.1
  * Author: cpldcpu@gmail.com
  * Creation Date: 2013-11-3
- 
- 
  * Update       : 2014-01-4
- * Added initial sync-state, which will discard the first delay measurement. 
- * This allows to call this routine before or during the SE0 bus reset without 
- * corrupting OSCCAL.
- * Removed CLI/SEI to allow more flexibility.
  * 
  * Tabsize: 4
  * License: GNU GPL v2 (see License.txt), GNU GPL v3 or proprietary (CommercialLicense.txt)
@@ -19,28 +13,34 @@
  *
  *
  * Benefits:
- *	  - Codesize reduced by 90 bytes.
+ *    - Codesize reduced by 90 bytes.
  *    - Improved robustness due to removing timeout from frame length measurement and 
- *	    inserted NOP after OSCCAL writes.
+ *      inserted NOP after OSCCAL writes.
  *
  * Changes:
  *    - The new routine performs a combined binary and neighborhood search
  *      in a single loop.
  *      Note that the neighborhood search is necessary due to the quasi-monotonic 
  *      nature of OSCCAL. (See Atmel application note AVR054).
- *	  - Inserted NOP after writes to OSCCAL to avoid CPU errors during oscillator
+ *    - Inserted NOP after writes to OSCCAL to avoid CPU errors during oscillator
  *      stabilization. 
  *    - Implemented new routine to measure frame time "usbMeasureFrameLengthDecreasing".
- *		This routine takes the target time as a parameter and returns the deviation.
- *	  - usbMeasureFrameLengthDecreasing measures in multiples of 5 cycles and is thus
- *	    slighly more accurate.
- *	  - usbMeasureFrameLengthDecreasing does not support time out anymore. The original
- *	    implementation returned zero in case of time out, which would have caused the old
+ *      This routine takes the target time as a parameter and returns the deviation.
+ *    - usbMeasureFrameLengthDecreasing measures in multiples of 5 cycles and is thus
+ *      slighly more accurate.
+ *    - usbMeasureFrameLengthDecreasing does not support time out anymore. The original
+ *      implementation returned zero in case of time out, which would have caused the old
  *      calibrateOscillator() implementation to increase OSSCAL to 255, effictively
  *      overclocking and most likely crashing the CPU. The new implementation will enter
- *		an infinite loop when no USB activity is encountered. The user program should
+ *      an infinite loop when no USB activity is encountered. The user program should
  *      use the watchdog to escape from situations like this.
-  * 
+ * Update 2014-01-4
+ *    - Added an initial sync-state, which will discard the first delay measurement. 
+ *      This allows to call this routine before or during the SE0 bus reset without 
+ *      corrupting OSCCAL.
+ *     - Removed CLI/SEI to allow more flexibility.
+ * 
+ * 
  * This routine will work both on controllers with and without split OSCCAL range.
  * The first trial value is 128 which is the lowest value of the upper OSCCAL range
  * on Attiny85 and will effectively limit the search to the upper range, unless the

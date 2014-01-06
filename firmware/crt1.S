@@ -59,8 +59,8 @@
 __bad_interrupt:	
 __vectors:
 	XJMP	__init
-	vector	__vector_1
-	vector	__vector_2
+;	vector	__vector_1
+;	vector	__vector_2
 	.endfunc
 
 	/* Handle unexpected interrupts (enabled and no handler), which
@@ -87,8 +87,8 @@ __init:
 	.set	__heap_end, 0
 
 	.section .init2,"ax",@progbits
-	clr		R1
-	out		0x3f,r1
+;	clr		R1
+;	out		0x3f,r1
   /*
 	ldi		r28,lo8(__stack)
 	ldi		r29,hi8(__stack)

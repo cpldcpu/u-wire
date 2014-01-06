@@ -104,6 +104,7 @@ int main(void) {
   USB_INTR_ENABLE |= (1 << USB_INTR_ENABLE_BIT);
     
   DDRB|=ws2812_mask;
+  DDRB|=_BV(PB1)|_BV(PB2);
   
   // Dangerous hack:
   // We assume that the next low level on D- is the host-issued reset. This will
@@ -115,12 +116,30 @@ int main(void) {
   // to a new USB host as the usb driver is going to ignore reset.
  
   calibrateOscillatorASM();
-  
-  sei();   
-  do {    
+ //sei();
+  USB_INTR_PENDING = 1<<USB_INTR_PENDING_BIT;                   
+  do { 
+
+     PORTB|=_BV(PB1);
+
+    while ( !(USB_INTR_PENDING & (1<<USB_INTR_PENDING_BIT)) );
+    
+    USB_INTR_VECTOR();  
+    /*
+       asm volatile(
+       ""
+        :
+         :
+         : "r29","r28"
+    );
+*/
+      PORTB&=~_BV(PB1);
+    
+  //  if ((usbRxBuf[0]==USBPID_SETUP)||(usbRxBuf[0]==USBPID_OUT)) continue;
+    
     schar len;
     uchar usbLineStatus;
-
+    
     len = usbRxLen - 3;
     if(len >= 0){
 //      uint8_t *data=(uint8_t *)usbRxBuf + USB_BUFSIZE + 1 - usbInputBufOffset;
@@ -194,7 +213,8 @@ int main(void) {
         usbRxLen = 0;       /* mark rx buffer as available */
     }
     
-    if(usbTxLen & 0x10){    /* transmit system idle */
+    if(usbTxLen & 0x10)   // transmit system is always idle in sequential mode
+    {  
         if(usbMsgLen != USB_NO_MSG){    /* transmit data pending? */
           usbMsgLen_t wantLen=usbMsgLen;
           
@@ -240,5 +260,22 @@ int main(void) {
           usbTxLen = wantLen;
         }
     }
+    
+        if (USB_INTR_PENDING & (1<<USB_INTR_PENDING_BIT))  // Usbpoll() collided with data packet
+       {        
+          uint8_t ctr;
+         
+          // loop takes 5 cycles
+          asm volatile(      
+          "         ldi  %0,%1 \n\t"        
+          "loop%=:  sbic %2,%3  \n\t"        
+          "         ldi  %0,%1  \n\t"
+          "         subi %0,1   \n\t"        
+          "         brne loop%= \n\t"   
+          : "=&d" (ctr)
+          :  "M" ((uint8_t)(10.0f*(F_CPU/1.0e6f)/5.0f+0.5)), "I" (_SFR_IO_ADDR(USBIN)), "M" (USB_CFG_DPLUS_BIT)
+          );       
+         USB_INTR_PENDING = 1<<USB_INTR_PENDING_BIT;                   
+       }      
   } while(1);  
 }
