@@ -59,8 +59,8 @@
 __bad_interrupt:	
 __vectors:
 	XJMP	__init
-;	vector	__vector_1
-;	vector	__vector_2
+	vector	__vector_1
+	vector	__vector_2
 	.endfunc
 
 	/* Handle unexpected interrupts (enabled and no handler), which
