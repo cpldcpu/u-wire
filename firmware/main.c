@@ -9,8 +9,6 @@
  
 #include <avr/io.h>
 #include <avr/pgmspace.h>
-#include <avr/wdt.h>
-#include <avr/boot.h>
 #include <util/delay.h>
 
 #define usbMsgPtr_t uint8_t
@@ -48,15 +46,14 @@ void ws2812_sendarray_mask(void)
   "   ld    %6,z+     \n\t"		// 15
   "   ldi   %0,8      \n\t"		// 16
   "loop%=:out %2,%3   \n\t"		// 1
-  "   lsl   %6        \n\t"		// 2
-  "   nop             \n\t"		// 3
-  "   brcs  .+2       \n\t"		// 4nt / 5t
+  "   rjmp .+0        \n\t"		// 3
+  "   sbrs  %6,7      \n\t"  // 4nt / 5t
   "   out   %2, %4    \n\t"		// 5
   "   dec   %0        \n\t"		// 6
   "   rjmp .+0        \n\t"		// 8	
   "   out   %2, %4    \n\t"		// 9
   "   breq  olop%=    \n\t"		// 10nt  / 11t
-  "   nop             \n\t"		// 11
+  "   lsl   %6        \n\t"		// 11
   "   rjmp .+0        \n\t"		// 13
   "   rjmp  loop%=    \n\t"		// 15
   "exit%=:            \n\t"		//
@@ -83,7 +80,11 @@ int main(void) __attribute__((__noreturn__));
 int main(void) {
   usbMsgLen_t  usbMsgLen; /* remaining number of bytes */
   usbMsgPtr_t  usbMsgPtr;  
-  
+
+#ifdef __AVR_ATtiny10__
+    CCP=0xD8;   // configuration change protection, write signature
+    CLKPSR=0;   // set cpu clock prescaler =1 (8Mhz) (attiny 4/5/9/10)
+#endif    
  // usbDeviceDisconnect();  /* do this while interrupts are disabled */
  // _delay_ms(500);  
   usbDeviceConnect();
@@ -99,7 +100,6 @@ int main(void) {
   USB_INTR_ENABLE |= (1 << USB_INTR_ENABLE_BIT);
     
   DDRB|=ws2812_mask;
- // DDRB|=_BV(PB1)|_BV(PB2);
   
   // Dangerous hack:
   // We assume that the next low level on D- is the host-issued reset. This will
@@ -113,12 +113,11 @@ int main(void) {
   calibrateOscillatorASM();
   USB_INTR_PENDING = 1<<USB_INTR_PENDING_BIT;                   
   do { 
-//    PORTB|=_BV(PB1);
 
     while ( !(USB_INTR_PENDING & (1<<USB_INTR_PENDING_BIT)) );
-    USB_INTR_VECTOR();  
-    
-  //  PORTB&=~_BV(PB1);
+ //   PORTB|=ws2812_mask;  
+    USB_INTR_VECTOR();      
+ //   PORTB&=~ws2812_mask;
     
     schar len;
     uchar usbLineStatus;
@@ -142,33 +141,35 @@ int main(void) {
         if(type != USBRQ_TYPE_STANDARD){  // All nonstandard setup-requests are updating the LED
           ws2812_sendarray_mask();
           replyLen=0;
-    /*      little-wire version reply
-            if( req == 34 ) // This has to be hardcoded to 34!
-              {
-                data[0]=LITTLE_WIRE_VERSION;
-                usbMsgPtr = data;
-                return 1;
-              } 
-            */
+  /*      little-wire version reply
+          if( req == 34 ) // This has to be hardcoded to 34!
+            {
+              data[0]=LITTLE_WIRE_VERSION;
+              usbMsgPtr = data;
+              return 1;
+            } 
+          */
         }else{   // standard requests are handled by driver 
           
           usbMsgLen_t len = 0;
-          uchar   value = rq->wValue.bytes[0];
-
-              SWITCH_START(rq->bRequest)
+    
+          uint8_t   request= rq->bRequest;
+          uint8_t   value0 = rq->wValue.bytes[0];
+          uint8_t   value1 = rq->wValue.bytes[1];
+          
+              SWITCH_START(request)
               SWITCH_CASE(USBRQ_GET_STATUS)           /* 0 */
                   len = 2;
               SWITCH_CASE(USBRQ_SET_ADDRESS)          /* 5 */
-                  usbNewDeviceAddr = value;
+                  usbNewDeviceAddr = value0;
               SWITCH_CASE(USBRQ_GET_DESCRIPTOR)       /* 6 */
-                SWITCH_START(rq->wValue.bytes[1])
+                SWITCH_START(value1)
                 SWITCH_CASE(USBDESCR_DEVICE)    /* 1 */
                     GET_DESCRIPTOR(USB_CFG_DESCR_PROPS_DEVICE, usbDescriptorDevice)
                 SWITCH_CASE(USBDESCR_CONFIG)    /* 2 */
                     GET_DESCRIPTOR(USB_CFG_DESCR_PROPS_CONFIGURATION, usbDescriptorConfiguration)
                 SWITCH_CASE(USBDESCR_STRING)    /* 3 */
-//                    SWITCH_START(rq->wValue.bytes[0])
-                    SWITCH_START(value)
+                    SWITCH_START(value0)
                     SWITCH_CASE(0)
                         GET_DESCRIPTOR(USB_CFG_DESCR_PROPS_STRING_0, usbDescriptorString0)
                     SWITCH_CASE(1)
@@ -212,19 +213,32 @@ int main(void) {
 
         // *data++ ^= USBPID_DATA0 ^ USBPID_DATA1; // DATA toggling 
         //  AVR-GCC 4.7.2 is too stupid to optimize this
-        
+#ifdef __AVR_ATtiny10__         
             asm volatile(
-            "         ld %0,-X    \n\t"        
+            "         ld %0,-Z    \n\t"        
             "         eor %0,%2   \n\t"        
-            "         st  X+,%0  \n\t"   
+            "         st  Z+,%0  \n\t"   
+            : "=&d" (c)
+            :  "z" (data), "r" ((uint8_t)(USBPID_DATA0 ^ USBPID_DATA1))
+            );            
+#else
+            asm volatile(
+            "         ld %0,-x    \n\t"        
+            "         eor %0,%2   \n\t"        
+            "         st  x+,%0  \n\t"   
             : "=&d" (c)
             :  "x" (data), "r" ((uint8_t)(USBPID_DATA0 ^ USBPID_DATA1))
             );            
-
+#endif
             i=wantLen;
             while (i--)  // don't bother app with 0 sized reads 
             { 
+#ifdef __AVR_ATtiny10__               
+                uint8_t *flashbase=(uint8_t*)0x4000+r;
+                c = *flashbase; 
+#else
                 c = USB_READ_FLASH(r);    // assign to char size variable to enforce byte ops 
+#endif                
                 *data++ = c;
                 r++;
             }    
@@ -237,8 +251,7 @@ int main(void) {
 
         }
       usbTxLen = wantLen;
-    }
-    
+    }    
         if (USB_INTR_PENDING & (1<<USB_INTR_PENDING_BIT))  // Usbpoll() collided with data packet
        {        
           uint8_t ctr;
