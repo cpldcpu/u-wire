@@ -137,10 +137,17 @@ int main(void) {
         usbMsgLen_t replyLen;
         usbTxBuf[0] = USBPID_DATA0;         /* initialize data toggling */
     //  usbTxLen = USBPID_NAK;              /* abort pending transmit */
-        uchar type = rq->bmRequestType & USBRQ_TYPE_MASK;
+        uint8_t   type = rq->bmRequestType & USBRQ_TYPE_MASK;
+        uint8_t   request= rq->bRequest;
         if(type != USBRQ_TYPE_STANDARD){  // All nonstandard setup-requests are updating the LED
-          ws2812_sendarray_mask();
-          replyLen=0;
+          if (request == 34) { // little-wire version reply
+            usbMsgPtr = (usbMsgPtr_t)(&usbDescriptorDevice[12]); // 
+            replyLen=1;          
+          }
+          else {
+            ws2812_sendarray_mask();
+            replyLen=0;
+          }
   /*      little-wire version reply
           if( req == 34 ) // This has to be hardcoded to 34!
             {

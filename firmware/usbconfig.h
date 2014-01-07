@@ -276,14 +276,9 @@ these macros are defined, the boot loader uses them.
  * you may use one of obdev's free shared VID/PID pairs. See the file
  * USB-IDs-for-free.txt for details!
  */
-#define USB_CFG_DEVICE_VERSION 0, 0
+#define USB_CFG_DEVICE_VERSION 0x12, 0
 /* Version number of the device: Minor number first, then major number.
  */
- // electric arrow - not compliant with obdev's rules but we'll have our own vid-pid soon
-//#define USB_CFG_VENDOR_NAME 0x2301
-//#define USB_CFG_VENDOR_NAME_LEN 1
-//#define USB_CFG_VENDOR_NAME 'd','i','g','i','s','t','u','m','p','.','c','o','m'
-//#define USB_CFG_VENDOR_NAME_LEN 13
 /* These two values define the vendor name returned by the USB device. The name
  * must be given as a list of characters under single quotes. The characters
  * are interpreted as Unicode (UTF-16) entities.
