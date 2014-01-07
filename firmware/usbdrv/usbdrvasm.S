@@ -19,8 +19,15 @@ the file appropriate for the given clock rate.
 #include "usbdrv.h"         /* for common defs */
 
 /* register names */
-#define x1      r16
-#define x2      r17
+
+#ifdef __AVR_ATtiny10__   
+  #define x1      r23
+  #define x2      r24
+#else
+  #define x1      r16
+  #define x2      r17
+#endif
+
 #define shift   r18
 #define cnt     r19
 #define x3      r20
@@ -131,11 +138,16 @@ RTMODEL "__rt_version", "3"
 #   define resCrcL  r24 /* result */
 #   define resCrcH  r25 /* result */
 
-#   define ptrL     XL
-#   define ptrH     XH
-#   define ptr      x
+#   define ptrL     ZL
+#   define ptrH     ZH
+#   define ptr      z
 #   define byte     r18
+#ifdef __AVR_ATtiny10__   
+#   define bitCnt   r16
+#else
 #   define bitCnt   r19
+#endif
+
 #   define polyL    r20
 #   define polyH    r21
 #   define scratch  r23
@@ -202,111 +214,11 @@ usbCrcReady:
 #undef polyH
 #undef scratch
 
-
-#if USB_CFG_HAVE_MEASURE_FRAME_LENGTH
-#ifdef __IAR_SYSTEMS_ASM__
-/* Register assignments for usbMeasureFrameLength on IAR cc */
-/* Calling conventions on IAR:
- * First parameter passed in r16/r17, second in r18/r19 and so on.
- * Callee must preserve r4-r15, r24-r29 (r28/r29 is frame pointer)
- * Result is passed in r16/r17
- * In case of the "tiny" memory model, pointers are only 8 bit with no
- * padding. We therefore pass argument 1 as "16 bit unsigned".
- */
-#   define resL     r16
-#   define resH     r17
-#   define cnt16L   r30
-#   define cnt16H   r31
-#   define cntH     r18
-
-#else  /* __IAR_SYSTEMS_ASM__ */ 
-/* Register assignments for usbMeasureFrameLength on gcc */
-/* Calling conventions on gcc:
- * First parameter passed in r24/r25, second in r22/23 and so on.
- * Callee must preserve r1-r17, r28/r29
- * Result is passed in r24/r25
- */
-#   define resL     r24
-#   define resH     r25
-#   define cnt16L   r24
-#   define cnt16H   r25
-#   define cntH     r26
-#endif
-#   define cnt16    cnt16L
-
-; extern unsigned usbMeasurePacketLength(void);
-; returns time between two idle strobes in multiples of 7 CPU clocks
-.global usbMeasureFrameLength
-usbMeasureFrameLength:
-    ldi     cntH, 6         ; wait ~ 10 ms for D- == 0
-    clr     cnt16L
-    clr     cnt16H
-usbMFTime16:
-    dec     cntH
-    breq    usbMFTimeout
-usbMFWaitStrobe:            ; first wait for D- == 0 (idle strobe)
-    sbiw    cnt16, 1        ;[0] [6]
-    breq    usbMFTime16     ;[2]
-    sbic    USBIN, USBMINUS ;[3]
-    rjmp    usbMFWaitStrobe ;[4]
-usbMFWaitIdle:              ; then wait until idle again
-    sbis    USBIN, USBMINUS ;1 wait for D- == 1
-    rjmp    usbMFWaitIdle   ;2
-    ldi     cnt16L, 1       ;1 represents cycles so far
-    clr     cnt16H          ;1
-usbMFWaitLoop:
-    in      cntH, USBIN     ;[0] [7]
-    adiw    cnt16, 1        ;[1]
-    breq    usbMFTimeout    ;[3]
-    andi    cntH, USBMASK   ;[4]
-    brne    usbMFWaitLoop   ;[5]
-usbMFTimeout:
-#if resL != cnt16L
-    mov     resL, cnt16L
-    mov     resH, cnt16H
-#endif
-    ret
-
-#undef resL
-#undef resH
-#undef cnt16
-#undef cnt16L
-#undef cnt16H
-#undef cntH
-
-#endif  /* USB_CFG_HAVE_MEASURE_FRAME_LENGTH */
-
-;----------------------------------------------------------------------------
-; Now include the clock rate specific code
-;----------------------------------------------------------------------------
-
-#ifndef USB_CFG_CLOCK_KHZ
-#   ifdef F_CPU
-#       define USB_CFG_CLOCK_KHZ (F_CPU/1000)
-#   else
-#       error "USB_CFG_CLOCK_KHZ not defined in usbconfig.h and no F_CPU set!"
-#   endif
-#endif
-
 #if USB_CFG_CHECK_CRC   /* separate dispatcher for CRC type modules */
-#   if USB_CFG_CLOCK_KHZ == 18000
-#       include "usbdrvasm18-crc.inc"
-#   else
 #       error "USB_CFG_CLOCK_KHZ is not one of the supported crc-rates!"
-#   endif
 #else   /* USB_CFG_CHECK_CRC */
 #   if USB_CFG_CLOCK_KHZ == 12000
 #       include "usbdrvasm12.inc"
-#   elif USB_CFG_CLOCK_KHZ == 12800
-#       include "usbdrvasm128.inc"
-#   elif USB_CFG_CLOCK_KHZ == 15000
-#       include "usbdrvasm15.inc"
-#   elif USB_CFG_CLOCK_KHZ == 16000
-#       include "usbdrvasm16.inc"
-#   elif USB_CFG_CLOCK_KHZ == 16500
-#       include "usbdrvasm165.inc"
-#   elif USB_CFG_CLOCK_KHZ == 20000
-#       include "usbdrvasm20.inc"
 #   else
 #       error "USB_CFG_CLOCK_KHZ is not one of the supported non-crc-rates!"
 #   endif

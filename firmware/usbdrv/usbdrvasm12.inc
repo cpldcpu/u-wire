@@ -67,59 +67,38 @@ waitForK:
     rjmp    foundK
     sbis    USBIN, USBMINUS
     rjmp    foundK
-#if USB_COUNT_SOF
-    lds     ZL, usbSofCount
-    inc     ZL
-    sts     usbSofCount, ZL
-#endif  /* USB_COUNT_SOF */
-#ifdef USB_SOF_HOOK
-    USB_SOF_HOOK
-#endif
-    ret
-;    rjmp    sofError
+    ret   ; SOF Error
 foundK:
 ;{3, 5} after falling D- edge, average delay: 4 cycles [we want 4 for center sampling]
 ;we have 1 bit time for setup purposes, then sample again. Numbers in brackets
 ;are cycles from center of first sync (double K) bit after the instruction
 
-    nop2 ;XX    ZH             ;2 [2]
-    rjmp    .+0                ;2 [4]
+;Altered to remove double buffering
+    nop2                       ;2 [2]
+    nop2                       ;2 [4]
     clr     ZH                 ;1 [5]
     ldi     ZL, lo8((usbRxBuf));1 [6]
     ldi     ZH, hi8((usbRxBuf));1 [7]
 
-;    lds     ZL, usbInputBufOffset;2 [4]
-;    clr     ZH                  ;1 [5]
-;    subi    ZL, lo8(-(usbRxBuf));1 [6]
-;    sbci    ZH, hi8(-(usbRxBuf));1 [7]
-
     sbis    USBIN, USBMINUS ;1 [8] we want two bits K [sample 1 cycle too early]
     rjmp    haveTwoBitsK    ;2 [10]
-;    nop2 ;XX     ZH              ;2 [11] undo the push from before
-    rjmp    waitForK        ;2 [13] this was not the end of sync, retry
+    rjmp    waitForK        ;2  this was not the end of sync, retry
 haveTwoBitsK:
 ;----------------------------------------------------------------------------
 ; push more registers and initialize values while we sample the first bits:
 ;----------------------------------------------------------------------------
-    nop2 ;XX    shift           ;2 [16]
-    nop2 ;XX    x1              ;2 [12]
-    nop2 ;XX    x2              ;2 [14]
+    ldi     cnt, USB_BUFSIZE;1 [12] [inserted init instruction]
+    ser     x3              ;1 [13] [inserted init instruction]
+    nop2                    ;2 [14]
+    nop2                    ;2 [16]
 
     in      x1, USBIN       ;1 [17] <-- sample bit 0
     ldi     shift, 0xff     ;1 [18]
     bst     x1, USBMINUS    ;1 [19]
     bld     shift, 0        ;1 [20]
-    nop2 ;XX    x3              ;2 [22]
-    nop2 ;XX    cnt             ;2 [24]
+    nop2
+    rjmp    rxbit1          ;2 [24]
     
-    in      x2, USBIN       ;1 [25] <-- sample bit 1
-    ser     x3              ;1 [26] [inserted init instruction]
-    eor     x1, x2          ;1 [27]
-    bst     x1, USBMINUS    ;1 [28]
-    bld     shift, 1        ;1 [29]
-    ldi     cnt, USB_BUFSIZE;1 [30] [inserted init instruction]
-    rjmp    rxbit2          ;2 [32]
-
 ;----------------------------------------------------------------------------
 ; Receiver loop (numbers in brackets are cycles within byte after instr)
 ;----------------------------------------------------------------------------
@@ -184,11 +163,15 @@ rxLoop:
     eor     x3, shift   ;1 [0] reconstruct: x3 is 0 at bit locations we changed, 1 at others
     in      x1, USBIN   ;1 [1] <-- sample bit 0
     st      z+, x3      ;2 [3] store data
+#ifdef __AVR_ATtiny10__
+    nop
+#endif     
     ser     x3          ;1 [4]
     nop                 ;1 [5]
     eor     x2, x1      ;1 [6]
-    bst     x2, USBMINUS;1 [7]
+    bst     x2, USBMINUS;1 [7]       
     bld     shift, 0    ;1 [8]
+rxbit1:     
     in      x2, USBIN   ;1 [9] <-- sample bit 1 (or possibly bit 0 stuffed)
     andi    x2, USBMASK ;1 [10]
     breq    se0         ;1 [11] SE0 check for bit 1
@@ -256,20 +239,6 @@ unstuff7:
     nop                 ;1 [66]
     rjmp    didUnstuff7 ;2 [68]
 
-macro POP_STANDARD ; 12 cycles
-;    pop     cnt
-;    pop     x3
-;    pop     x2
-;    pop     x1
-;    pop     shift
-;    pop     ZH
-    endm
-macro POP_RETI     ; 5 cycles
-;    pop     ZH
- ;   out     SREG, ZL
- ;   pop     ZL
-    endm
-
 #include "asmcommon.inc"
 
 ;----------------------------------------------------------------------------
@@ -296,9 +265,18 @@ sendAckAndReti:                 ;0 [-19] 19 cycles until SOP
 sendCntAndReti:                 ;0 [-17] 17 cycles until SOP
     mov     x3, cnt             ;1 [-16]
 usbSendX3:                      ;0 [-16]
+    ldi     cnt, 2              ;1 [-13]
+    
+; Attiny10 does not have its registers mapped to the memory space    
+#ifdef __AVR_ATtiny10__   
+    sts     usbRxBuf+9,x3   ; overwrite CRC, but this is not checked anyways
+    ldi     ZL, lo8(usbRxBuf+9) ;1 [-15] 'x3' is R20
+    ldi     ZH, 0               ;1 [-14]
+#else
     ldi     ZL, 20              ;1 [-15] 'x3' is R20
     ldi     ZH, 0               ;1 [-14]
-    ldi     cnt, 2              ;1 [-13]
+#endif    
+    
 ;   rjmp    usbSendAndReti      fallthrough
 
 ; USB spec says:
@@ -315,6 +293,9 @@ usbSendX3:                      ;0 [-16]
 usbSendAndReti:
     in      x2, USBDDR          ;[-12] 12 cycles until SOP
     ori     x2, USBMASK         ;[-11]
+#ifdef __AVR_ATtiny10__
+ ;   nop
+#endif    
     sbi     USBOUT, USBMINUS    ;[-10] prepare idle state; D+ and D- must have been 0 (no pullups)
     out     USBDDR, x2          ;[-8] <--- acquire bus
     in      x1, USBOUT          ;[-7] port mirror for tx loop
@@ -367,6 +348,7 @@ doExor7:
     ldi     x4, 6               ;[52]
 common7:
     ld      shift, z+           ;[53]
+    
     tst     cnt                 ;[55]
     out     USBOUT, x1          ;[56] <--- set bit
     brne    txByteLoop          ;[57]
@@ -374,6 +356,9 @@ common7:
 ;make SE0:
     cbr     x1, USBMASK         ;[58] prepare SE0 [spec says EOP may be 15 to 18 cycles]
     lds     x2, usbNewDeviceAddr;[59]
+#ifdef __AVR_ATtiny10__
+    nop
+#endif     
     lsl     x2                  ;[61] we compare with left shifted address
     subi    ZL, 2 + 20          ;[62] Only assign address on data packets, not ACK/NAK in x3
     sbci    ZH, 0               ;[63]
@@ -382,6 +367,9 @@ common7:
 ;set address only after data packet was sent, not after handshake
     breq    skipAddrAssign      ;[01]
     sts     usbDeviceAddr, x2   ; if not skipped: SE0 is one cycle longer
+#ifdef __AVR_ATtiny10__
+    nop
+#endif     
 skipAddrAssign:
 ;end of usbDeviceAddress transfer
     ldi     x2, 1<<USB_INTR_PENDING_BIT;[03] int0 occurred during TX -- clear pending flag
@@ -397,5 +385,4 @@ skipAddrAssign:
     out     USBOUT, x1          ;[16] <-- out J (idle) -- end of SE0 (EOP signal)
     out     USBDDR, x2          ;[17] <-- release bus now
     out     USBOUT, x3          ;[18] <-- ensure no pull-up resistors are active
-;    rjmp    doReturn
     ret

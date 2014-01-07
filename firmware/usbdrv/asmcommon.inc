@@ -44,7 +44,7 @@ overflow:
     USB_STORE_PENDING(x2)       ; clear any pending interrupts
 ignorePacket:
     clr     token
-;    rjmp    storeTokenAndReturn
+storeTokenAndReturn:
     sts     usbCurrentTok, token;[35]
 doReturn:    
     ret
@@ -61,21 +61,19 @@ se0:
     sbci    ZH, 0               ;[8]
     ldi     x2, 1<<USB_INTR_PENDING_BIT ;[9]
     USB_STORE_PENDING(x2)       ;[10] clear pending intr and check flag later. SE0 should be over.
-    ld      token, z            ;[11]
+;    ld      token, z            ;[11]
+    ld      token, z+            ;[11] <-- critical change to get  Attiny10 work
     cpi     token, USBPID_DATA0 ;[13]
     breq    handleData          ;[14]
     cpi     token, USBPID_DATA1 ;[15]
     breq    handleData          ;[16]
     lds     shift, usbDeviceAddr;[17]
-    ldd     x2, z+1             ;[19] ADDR and 1 bit endpoint number
+;    ldd     x2, z+1             ;[19] ADDR and 1 bit endpoint number
+    ld     x2, z               ;[19] <-- critical change to get  Attiny10 to work
     lsl     x2                  ;[21] shift out 1 bit endpoint number
     cpse    x2, shift           ;[22]
     rjmp    ignorePacket        ;[23]
-/* only compute endpoint number in x3 if required later */
-#if USB_CFG_HAVE_INTRIN_ENDPOINT || USB_CFG_IMPLEMENT_FN_WRITEOUT
-    ldd     x3, z+2             ;[24] endpoint number + crc
-    rol     x3                  ;[26] shift in LSB of endpoint
-#endif
+
     cpi     token, USBPID_IN    ;[27]
     breq    handleIn            ;[28]
     cpi     token, USBPID_SETUP ;[29]
@@ -88,32 +86,18 @@ se0:
 ;the end of SE0. The sync code allows up to 40 cycles delay from the start of
 ;the sync pattern until the first bit is sampled. That's a total of 56 cycles.
 handleSetupOrOut:               ;[32]
-#if USB_CFG_IMPLEMENT_FN_WRITEOUT   /* if we have data for endpoint != 0, set usbCurrentTok to address */
-    andi    x3, 0xf             ;[32]
-    breq    storeTokenAndReturn ;[33]
-    mov     token, x3           ;[34] indicate that this is endpoint x OUT
-#endif
 
-;    POP_STANDARD                ;[37] 12...16 cycles
-    sts     usbCurrentTok, token;[35]
+; always wait for data if SETUP or OUT was found.
+; No timeout, however the bus can be recovered at the next transmission
+
+    sts     usbCurrentTok, token;[xx]
 waitmore:    
-    USB_LOAD_PENDING(ZL)        ;[49]
-    sbrc    ZL, USB_INTR_PENDING_BIT;[50] check whether data is already arriving
-    rjmp    waitForJ            ;[51] save the pops and pushes -- a new interrupt is already pending
+    USB_LOAD_PENDING(ZL)        ;[xx]
+    sbrc    ZL, USB_INTR_PENDING_BIT;[xx] check whether data is already arriving
+    rjmp    waitForJ            ;[xx] save the pops and pushes -- a new interrupt is already pending
     rjmp     waitmore
-    
-;storeTokenAndReturn:
-;    sts     usbCurrentTok, token;[35]
-;doReturn:
-;sofError:
- ;   POP_RETI                    ;macro call
-;    reti
-;    ret
 
 handleData:
-#if USB_CFG_CHECK_CRC
-    CRC_CLEANUP_AND_CHECK       ; jumps to ignorePacket if CRC error
-#endif
     lds     shift, usbCurrentTok;[18]
     tst     shift               ;[20]
     breq    doReturn            ;[21]
@@ -123,13 +107,11 @@ handleData:
 ; 2006-03-11: The following two lines fix a problem where the device was not
 ; recognized if usbPoll() was called less frequently than once every 4 ms.
 
-;   The commented out code is not needed with fast polling
+;   The commented out code is not needed with polled usb
 
 ;    cpi     cnt, 4              ;[26] zero sized data packets are status phase only -- ignore and ack
 ;    brmi    sendAckAndReti      ;[27] keep rx buffer clean -- we must not NAK next SETUP
-#if USB_CFG_CHECK_DATA_TOGGLING
-    sts     usbCurrentDataToken, token  ; store for checking by C code
-#endif
+
     sts     usbRxLen, cnt       ;[28] store received data, swap buffers
     sts     usbRxToken, shift   ;[30]
 ;   lds     x2, usbInputBufOffset;[32] swap buffers
@@ -146,18 +128,12 @@ handleIn:
     cpi     x1, 1               ;[32] negative values are flow control, 0 means "buffer free"
     brge    sendNakAndReti      ;[33] unprocessed input packet?
     ldi     x1, USBPID_NAK      ;[34] prepare value for usbTxLen
-#if USB_CFG_HAVE_INTRIN_ENDPOINT
-    andi    x3, 0xf             ;[35] x3 contains endpoint
-#if USB_CFG_SUPPRESS_INTR_CODE
-    brne    sendNakAndReti      ;[36]
-#else
-    brne    handleIn1           ;[36]
-#endif
-#endif
+
     lds     cnt, usbTxLen       ;[37]
     sbrc    cnt, 4              ;[39] all handshake tokens have bit 4 set
     rjmp    sendCntAndReti      ;[40] 42 + 16 = 58 until SOP
     sts     usbTxLen, x1        ;[41] x1 == USBPID_NAK from above
+usbSendTxBuf:
     ldi     ZL, lo8(usbTxBuf)   ;[43]
     ldi     ZH, hi8(usbTxBuf)   ;[44]
     rjmp    usbSendAndReti      ;[45] 57 + 12 = 59 until SOP
@@ -171,29 +147,3 @@ handleIn:
 ; RAM this way and avoid potential problems with endless retries. The rest of
 ; the driver assumes error-free transfers anyway.
 
-#if !USB_CFG_SUPPRESS_INTR_CODE && USB_CFG_HAVE_INTRIN_ENDPOINT /* placed here due to relative jump range */
-handleIn1:                      ;[38]
-#if USB_CFG_HAVE_INTRIN_ENDPOINT3
-; 2006-06-10 as suggested by O.Tamura: support second INTR IN / BULK IN endpoint
-    cpi     x3, USB_CFG_EP3_NUMBER;[38]
-    breq    handleIn3           ;[39]
-#endif
-    lds     cnt, usbTxLen1      ;[40]
-    sbrc    cnt, 4              ;[42] all handshake tokens have bit 4 set
-    rjmp    sendCntAndReti      ;[43] 47 + 16 = 63 until SOP
-    sts     usbTxLen1, x1       ;[44] x1 == USBPID_NAK from above
-    ldi     ZL, lo8(usbTxBuf1)  ;[46]
-    ldi     ZH, hi8(usbTxBuf1)  ;[47]
-    rjmp    usbSendAndReti      ;[48] 50 + 12 = 62 until SOP
-
-#if USB_CFG_HAVE_INTRIN_ENDPOINT3
-handleIn3:
-    lds     cnt, usbTxLen3      ;[41]
-    sbrc    cnt, 4              ;[43]
-    rjmp    sendCntAndReti      ;[44] 49 + 16 = 65 until SOP
-    sts     usbTxLen3, x1       ;[45] x1 == USBPID_NAK from above
-    ldi     ZL, lo8(usbTxBuf3)  ;[47]
-    ldi     ZH, hi8(usbTxBuf3)  ;[48]
-    rjmp    usbSendAndReti      ;[49] 51 + 12 = 63 until SOP
-#endif
-#endif
