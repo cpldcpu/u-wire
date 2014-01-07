@@ -107,7 +107,7 @@ calibrateOscillatorASM:
 usbCOloop:
 
   out		OSCCAL, try
-  nop
+;  nop
 
   ; Delay values = F_CPU * 999e-6 / 5 + 0.5
   
@@ -165,7 +165,7 @@ usbCObinarysearch:
 	brne	usbCOloop
 
 	out		OSCCAL, opV
-	nop
+;	nop
   ret
 
 #undef i
