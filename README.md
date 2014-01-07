@@ -21,7 +21,8 @@ Next step: Design hardware.
   * 28 bytes SRAM
   * Uses only regs R16-R31
  
-
+## Test set up ##
+![Front](u-wire-test.jpg)
 
 
 
