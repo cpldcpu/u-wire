@@ -6,6 +6,8 @@ to control a single WS2812 LED via USB.
 
 The source started out as an amalganation of micronucleus and littlewire. All excess functionality was cut away.
 
+Update 2014-01-07: It actually works on a ATtiny 10 now, yay! Next step: Design hardware.
+
 ### Features ###
  * Enumeration.
  * Only SETUP-request can be received.
@@ -13,10 +15,11 @@ The source started out as an amalganation of micronucleus and littlewire. All ex
  * All SETUP packets that are not system request are forwarded to a WS2812 RGB LED on PB0.
  
 ### Memory usage ###
-  * 1018 bytes Flash
+  * 1020 bytes Flash
   * 28 bytes SRAM
   * Uses only regs R16-R31
  
+
 
 
 
