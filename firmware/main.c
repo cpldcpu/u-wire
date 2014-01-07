@@ -89,8 +89,8 @@ int main(void) {
   usbMsgLen_t  usbMsgLen; /* remaining number of bytes */
   usbMsgPtr_t  usbMsgPtr;  
   
-  usbDeviceDisconnect();  /* do this while interrupts are disabled */
-  _delay_ms(500);  
+ // usbDeviceDisconnect();  /* do this while interrupts are disabled */
+ // _delay_ms(500);  
   usbDeviceConnect();
 
   usbTxLen = USBPID_NAK;
@@ -127,14 +127,11 @@ int main(void) {
     USB_INTR_VECTOR();  
       PORTB&=~_BV(PB1);
     
-  //  if ((usbRxBuf[0]==USBPID_SETUP)||(usbRxBuf[0]==USBPID_OUT)) continue;
-    
     schar len;
     uchar usbLineStatus;
     
     len = usbRxLen - 3;
     if(len >= 0){
-//      uint8_t *data=(uint8_t *)usbRxBuf + USB_BUFSIZE + 1 - usbInputBufOffset;
      uint8_t *data=(uint8_t *)usbRxBuf + 1 ;
       usbRequest_t    *rq = (void *)data;   
       /* usbRxToken can be:
@@ -203,7 +200,7 @@ int main(void) {
         usbRxLen = 0;       /* mark rx buffer as available */
     }
     
-    if(usbTxLen & 0x10)   // transmit system is always idle in sequential mode
+ //   if(usbTxLen & 0x10)   // transmit system is always idle in sequential mode
     {  
         if(usbMsgLen != USB_NO_MSG){    /* transmit data pending? */
           usbMsgLen_t wantLen=usbMsgLen;
@@ -216,7 +213,6 @@ int main(void) {
             usbMsgLen = USB_NO_MSG;
           }
           
-
           {   
             uint8_t i,c;
             usbMsgPtr_t r = usbMsgPtr;             
