@@ -54,23 +54,23 @@ ignorePacket:
 se0:
     subi    cnt, USB_BUFSIZE    ;[5]
     neg     cnt                 ;[6]
-    sub     YL, cnt             ;[7]
-    sbci    YH, 0               ;[8]
+    sub     ZL, cnt             ;[7]
+    sbci    ZH, 0               ;[8]
     ldi     x2, 1<<USB_INTR_PENDING_BIT ;[9]
     USB_STORE_PENDING(x2)       ;[10] clear pending intr and check flag later. SE0 should be over.
-    ld      token, y            ;[11]
+    ld      token, z            ;[11]
     cpi     token, USBPID_DATA0 ;[13]
     breq    handleData          ;[14]
     cpi     token, USBPID_DATA1 ;[15]
     breq    handleData          ;[16]
     lds     shift, usbDeviceAddr;[17]
-    ldd     x2, y+1             ;[19] ADDR and 1 bit endpoint number
+    ldd     x2, z+1             ;[19] ADDR and 1 bit endpoint number
     lsl     x2                  ;[21] shift out 1 bit endpoint number
     cpse    x2, shift           ;[22]
     rjmp    ignorePacket        ;[23]
 /* only compute endpoint number in x3 if required later */
 #if USB_CFG_HAVE_INTRIN_ENDPOINT || USB_CFG_IMPLEMENT_FN_WRITEOUT
-    ldd     x3, y+2             ;[24] endpoint number + crc
+    ldd     x3, z+2             ;[24] endpoint number + crc
     rol     x3                  ;[26] shift in LSB of endpoint
 #endif
     cpi     token, USBPID_IN    ;[27]
@@ -95,8 +95,8 @@ handleSetupOrOut:               ;[32]
     sts     usbCurrentTok, token;[35]
 
 waitmore:    
-    USB_LOAD_PENDING(YL)        ;[49]
-    sbrc    YL, USB_INTR_PENDING_BIT;[50] check whether data is already arriving
+    USB_LOAD_PENDING(ZL)        ;[49]
+    sbrc    ZL, USB_INTR_PENDING_BIT;[50] check whether data is already arriving
     rjmp    waitForJ            ;[51] save the pops and pushes -- a new interrupt is already pending
     rjmp     waitmore
 storeTokenAndReturn:
@@ -155,8 +155,8 @@ handleIn:
     sbrc    cnt, 4              ;[39] all handshake tokens have bit 4 set
     rjmp    sendCntAndReti      ;[40] 42 + 16 = 58 until SOP
     sts     usbTxLen, x1        ;[41] x1 == USBPID_NAK from above
-    ldi     YL, lo8(usbTxBuf)   ;[43]
-    ldi     YH, hi8(usbTxBuf)   ;[44]
+    ldi     ZL, lo8(usbTxBuf)   ;[43]
+    ldi     ZH, hi8(usbTxBuf)   ;[44]
     rjmp    usbSendAndReti      ;[45] 57 + 12 = 59 until SOP
 
 ; Comment about when to set usbTxLen to USBPID_NAK:
@@ -179,8 +179,8 @@ handleIn1:                      ;[38]
     sbrc    cnt, 4              ;[42] all handshake tokens have bit 4 set
     rjmp    sendCntAndReti      ;[43] 47 + 16 = 63 until SOP
     sts     usbTxLen1, x1       ;[44] x1 == USBPID_NAK from above
-    ldi     YL, lo8(usbTxBuf1)  ;[46]
-    ldi     YH, hi8(usbTxBuf1)  ;[47]
+    ldi     ZL, lo8(usbTxBuf1)  ;[46]
+    ldi     ZH, hi8(usbTxBuf1)  ;[47]
     rjmp    usbSendAndReti      ;[48] 50 + 12 = 62 until SOP
 
 #if USB_CFG_HAVE_INTRIN_ENDPOINT3
@@ -189,8 +189,8 @@ handleIn3:
     sbrc    cnt, 4              ;[43]
     rjmp    sendCntAndReti      ;[44] 49 + 16 = 65 until SOP
     sts     usbTxLen3, x1       ;[45] x1 == USBPID_NAK from above
-    ldi     YL, lo8(usbTxBuf3)  ;[47]
-    ldi     YH, hi8(usbTxBuf3)  ;[48]
+    ldi     ZL, lo8(usbTxBuf3)  ;[47]
+    ldi     ZH, hi8(usbTxBuf3)  ;[48]
     rjmp    usbSendAndReti      ;[49] 51 + 12 = 63 until SOP
 #endif
 #endif

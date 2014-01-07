@@ -150,9 +150,7 @@ int main(void) {
         usbTxLen = USBPID_NAK;              /* abort pending transmit */
         uchar type = rq->bmRequestType & USBRQ_TYPE_MASK;
         if(type != USBRQ_TYPE_STANDARD){  // All nonstandard setup-requests are updating the LED
-          cli();  
           ws2812_sendarray_mask(&data[3],3);        
-          sei();
           replyLen=0;
     /*      little-wire version reply
           	if( req == 34 ) // This has to be hardcoded to 34!
