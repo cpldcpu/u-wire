@@ -59,8 +59,12 @@
 __bad_interrupt:	
 __vectors:
 	XJMP	__init
+#ifdef __AVR_ATtiny85__
+  
 	vector	__vector_1
 	vector	__vector_2
+#endif
+  
 	.endfunc
 
 	/* Handle unexpected interrupts (enabled and no handler), which
@@ -87,7 +91,11 @@ __init:
 	.set	__heap_end, 0
 
 	.section .init2,"ax",@progbits
-;	clr		R1
+#ifdef __AVR_ATtiny10__  
+	clr		R17
+#else
+  clr   R1
+#endif  
 ;	out		0x3f,r1
   /*
 	ldi		r28,lo8(__stack)
