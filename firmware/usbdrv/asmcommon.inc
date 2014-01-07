@@ -44,8 +44,11 @@ overflow:
     USB_STORE_PENDING(x2)       ; clear any pending interrupts
 ignorePacket:
     clr     token
-    rjmp    storeTokenAndReturn
-
+;    rjmp    storeTokenAndReturn
+    sts     usbCurrentTok, token;[35]
+doReturn:    
+    ret
+    
 ;----------------------------------------------------------------------------
 ; Processing of received packet (numbers in brackets are cycles after center of SE0)
 ;----------------------------------------------------------------------------
@@ -93,19 +96,19 @@ handleSetupOrOut:               ;[32]
 
 ;    POP_STANDARD                ;[37] 12...16 cycles
     sts     usbCurrentTok, token;[35]
-
 waitmore:    
     USB_LOAD_PENDING(ZL)        ;[49]
     sbrc    ZL, USB_INTR_PENDING_BIT;[50] check whether data is already arriving
     rjmp    waitForJ            ;[51] save the pops and pushes -- a new interrupt is already pending
     rjmp     waitmore
-storeTokenAndReturn:
-    sts     usbCurrentTok, token;[35]
-doReturn:
-sofError:
-    POP_RETI                    ;macro call
+    
+;storeTokenAndReturn:
+;    sts     usbCurrentTok, token;[35]
+;doReturn:
+;sofError:
+ ;   POP_RETI                    ;macro call
 ;    reti
-    ret
+;    ret
 
 handleData:
 #if USB_CFG_CHECK_CRC

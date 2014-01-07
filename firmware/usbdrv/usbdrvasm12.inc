@@ -75,7 +75,8 @@ waitForK:
 #ifdef USB_SOF_HOOK
     USB_SOF_HOOK
 #endif
-    rjmp    sofError
+    ret
+;    rjmp    sofError
 foundK:
 ;{3, 5} after falling D- edge, average delay: 4 cycles [we want 4 for center sampling]
 ;we have 1 bit time for setup purposes, then sample again. Numbers in brackets
@@ -396,4 +397,5 @@ skipAddrAssign:
     out     USBOUT, x1          ;[16] <-- out J (idle) -- end of SE0 (EOP signal)
     out     USBDDR, x2          ;[17] <-- release bus now
     out     USBOUT, x3          ;[18] <-- ensure no pull-up resistors are active
-    rjmp    doReturn
+;    rjmp    doReturn
+    ret
