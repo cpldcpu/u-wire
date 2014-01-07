@@ -105,10 +105,8 @@ calibrateOscillatorASM:
   ldi   i, 11       ; 11 iterations (1x sync, 7x binary search, 3x neighbourhood)
 
 usbCOloop:
-
   out		OSCCAL, try
-;  nop
-
+  
   ; Delay values = F_CPU * 999e-6 / 5 + 0.5
   
 #if (F_CPU == 16500000)
@@ -134,7 +132,12 @@ usbCOWaitIdle:              ; then wait until idle again
     sbis    USBIN, USBMINUS ;1 wait for D- == 1
     rjmp    usbCOWaitIdle   ;2
 usbCOWaitLoop:
-	sbiw	cnt16,1			;[0] [5]
+#ifdef __AVR_ATtiny10__
+    subi cnt16L,1 ;[0] [5]
+    sbci cnt16H,0 ;[1] 
+#else
+    sbiw  cnt16,1 ;[0] [5]
+#endif  
     sbic    USBIN, USBMINUS ;[2] 
     rjmp    usbCOWaitLoop   ;[3]
 
@@ -166,6 +169,7 @@ usbCObinarysearch:
 
 	out		OSCCAL, opV
 ;	nop
+
   ret
 
 #undef i
