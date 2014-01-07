@@ -18,7 +18,10 @@ Next step: Design hardware.
  
 ### Memory usage ###
   * 1020 bytes Flash
-  * 28 bytes SRAM
+  * SRAM:
+    + 28 bytes static variables
+    + 2 bytes return stack 
+    + 2 bytes free
   * Uses only regs R16-R31
  
 ## Test set up ##
