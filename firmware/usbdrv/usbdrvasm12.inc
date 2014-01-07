@@ -40,8 +40,8 @@ DATAx (rx) to ACK/NAK/STALL (tx)                    2   7.5    16-60
 USB_INTR_VECTOR:
 ;order of registers pushed: YL, SREG [sofError], YH, shift, x1, x2, x3, cnt
     push    YL              ;2 [35] push only what is necessary to sync with edge ASAP
-    in      YL, SREG        ;1 [37]
-    push    YL              ;2 [39]
+;    in      YL, SREG        ;1 [37]
+    push    YH              ;2 [39]
 ;----------------------------------------------------------------------------
 ; Synchronize with sync pattern:
 ;----------------------------------------------------------------------------
@@ -79,30 +79,36 @@ foundK:
 ;{3, 5} after falling D- edge, average delay: 4 cycles [we want 4 for center sampling]
 ;we have 1 bit time for setup purposes, then sample again. Numbers in brackets
 ;are cycles from center of first sync (double K) bit after the instruction
-    push    YH                  ;2 [2]
-    lds     YL, usbInputBufOffset;2 [4]
+
+    nop2 ;XX    YH                  ;2 [2]
+    rjmp      .+0
     clr     YH                  ;1 [5]
-    subi    YL, lo8(-(usbRxBuf));1 [6]
-    sbci    YH, hi8(-(usbRxBuf));1 [7]
+    ldi     YL, lo8((usbRxBuf));1 [6]
+    ldi     YH, hi8((usbRxBuf));1 [7]
+
+;    lds     YL, usbInputBufOffset;2 [4]
+;    clr     YH                  ;1 [5]
+;    subi    YL, lo8(-(usbRxBuf));1 [6]
+;    sbci    YH, hi8(-(usbRxBuf));1 [7]
 
     sbis    USBIN, USBMINUS ;1 [8] we want two bits K [sample 1 cycle too early]
     rjmp    haveTwoBitsK    ;2 [10]
-    pop     YH              ;2 [11] undo the push from before
+;    nop2 ;XX     YH              ;2 [11] undo the push from before
     rjmp    waitForK        ;2 [13] this was not the end of sync, retry
 haveTwoBitsK:
 ;----------------------------------------------------------------------------
 ; push more registers and initialize values while we sample the first bits:
 ;----------------------------------------------------------------------------
-    push    shift           ;2 [16]
-    push    x1              ;2 [12]
-    push    x2              ;2 [14]
+    nop2 ;XX    shift           ;2 [16]
+    nop2 ;XX    x1              ;2 [12]
+    nop2 ;XX    x2              ;2 [14]
 
     in      x1, USBIN       ;1 [17] <-- sample bit 0
     ldi     shift, 0xff     ;1 [18]
     bst     x1, USBMINUS    ;1 [19]
     bld     shift, 0        ;1 [20]
-    push    x3              ;2 [22]
-    push    cnt             ;2 [24]
+    nop2 ;XX    x3              ;2 [22]
+    nop2 ;XX    cnt             ;2 [24]
     
     in      x2, USBIN       ;1 [25] <-- sample bit 1
     ser     x3              ;1 [26] [inserted init instruction]
@@ -249,16 +255,16 @@ unstuff7:
     rjmp    didUnstuff7 ;2 [68]
 
 macro POP_STANDARD ; 12 cycles
-    pop     cnt
-    pop     x3
-    pop     x2
-    pop     x1
-    pop     shift
-    pop     YH
+;    pop     cnt
+;    pop     x3
+;    pop     x2
+;    pop     x1
+;    pop     shift
+;    pop     YH
     endm
 macro POP_RETI     ; 5 cycles
-    pop     YL
-    out     SREG, YL
+    pop     YH
+ ;   out     SREG, YL
     pop     YL
     endm
 
@@ -312,7 +318,7 @@ usbSendAndReti:
     in      x1, USBOUT          ;[-7] port mirror for tx loop
     ldi     shift, 0x40         ;[-6] sync byte is first byte sent (we enter loop after ror)
     ldi     x2, USBMASK         ;[-5]
-    push    x4                  ;[-4]
+    nop2;push   x4                  ;[-4]
 doExorN1:
     eor     x1, x2              ;[-2] [06] [62]
     ldi     x4, 6               ;[-1] [07] [63]
@@ -383,7 +389,7 @@ skipAddrAssign:
     cbr     x2, USBMASK         ;[07] set both pins to input
     mov     x3, x1              ;[08]
     cbr     x3, USBMASK         ;[09] configure no pullup on both pins
-    pop     x4                  ;[10]
+    nop2;pop    x4                   ;[10]
     nop2                        ;[12]
     nop2                        ;[14]
     out     USBOUT, x1          ;[16] <-- out J (idle) -- end of SE0 (EOP signal)

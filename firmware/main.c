@@ -125,14 +125,6 @@ int main(void) {
     while ( !(USB_INTR_PENDING & (1<<USB_INTR_PENDING_BIT)) );
     
     USB_INTR_VECTOR();  
-    /*
-       asm volatile(
-       ""
-        :
-         :
-         : "r29","r28"
-    );
-*/
       PORTB&=~_BV(PB1);
     
   //  if ((usbRxBuf[0]==USBPID_SETUP)||(usbRxBuf[0]==USBPID_OUT)) continue;

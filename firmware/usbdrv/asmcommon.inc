@@ -90,16 +90,22 @@ handleSetupOrOut:               ;[32]
     breq    storeTokenAndReturn ;[33]
     mov     token, x3           ;[34] indicate that this is endpoint x OUT
 #endif
-storeTokenAndReturn:
+
+;    POP_STANDARD                ;[37] 12...16 cycles
     sts     usbCurrentTok, token;[35]
-doReturn:
-    POP_STANDARD                ;[37] 12...16 cycles
+
+waitmore:    
     USB_LOAD_PENDING(YL)        ;[49]
     sbrc    YL, USB_INTR_PENDING_BIT;[50] check whether data is already arriving
     rjmp    waitForJ            ;[51] save the pops and pushes -- a new interrupt is already pending
+    rjmp     waitmore
+storeTokenAndReturn:
+    sts     usbCurrentTok, token;[35]
+doReturn:
 sofError:
     POP_RETI                    ;macro call
-    reti
+;    reti
+    ret
 
 handleData:
 #if USB_CFG_CHECK_CRC
