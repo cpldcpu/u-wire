@@ -25,7 +25,7 @@ int main(void)
 		printf("> Little Wire could not be found!\n");
 		exit(EXIT_FAILURE);
 	}
-	/*
+	
 	version = readFirmwareVersion(lw);
 	printf("> Little Wire firmware version: %d.%d\n",((version & 0xF0)>>4),(version&0x0F));	
 	if(version<0x12)
@@ -33,7 +33,7 @@ int main(void)
 		printf("> This example requires the new 1.2 version firmware. Please update soon.\n");
 		return 0;
 	}	
-	*/
+	
 	pinMode(lw, LED, OUTPUT);
 
 	for(;;){
