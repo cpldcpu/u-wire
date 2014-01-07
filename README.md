@@ -1,7 +1,7 @@
 micro-wire
 ==========
 
-This is an attempt at the smallest possible USB compliant device with V-USB. It uses an ATtiny85 
+This is an attempt at the smallest possible USB compliant device with V-USB. It uses an ATtiny10 
 to control a single WS2812 LED via USB. 
 
 The source started out as an amalganation of micronucleus and littlewire. All excess functionality was cut away.
