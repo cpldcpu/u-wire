@@ -100,15 +100,6 @@ int main(void) {
   USB_INTR_ENABLE |= (1 << USB_INTR_ENABLE_BIT);
     
   DDRB|=ws2812_mask;
-  
-  // Dangerous hack:
-  // We assume that the next low level on D- is the host-issued reset. This will
-  // be detected as the first pulse in the calibrate osc-routine, forcing it to
-  // search for an osccal value above 128. This is true for the ATtiny85 and >16Mhz,
-  // but may break under other circumstances. 
-  // Note: This seems to be a bug in all V-USB implementations with osccal.
-  // This approach may also fail if the device is powered while it is reconnected
-  // to a new USB host as the usb driver is going to ignore reset.
  
   calibrateOscillatorASM();
   USB_INTR_PENDING = 1<<USB_INTR_PENDING_BIT;                   
@@ -141,23 +132,15 @@ int main(void) {
         uint8_t   request= rq->bRequest;
         if(type != USBRQ_TYPE_STANDARD){  // All nonstandard setup-requests are updating the LED
           if (request == 34) { // little-wire version reply
-            usbMsgPtr = (usbMsgPtr_t)(&usbDescriptorDevice[12]); // 
+            usbMsgPtr = (usbMsgPtr_t)(&usbDescriptorDevice[12]); // Version from usb descriptor
             replyLen=1;          
           }
           else {
             ws2812_sendarray_mask();
             replyLen=0;
           }
-  /*      little-wire version reply
-          if( req == 34 ) // This has to be hardcoded to 34!
-            {
-              data[0]=LITTLE_WIRE_VERSION;
-              usbMsgPtr = data;
-              return 1;
-            } 
-          */
         }else{   // standard requests are handled by driver 
-          
+
           usbMsgLen_t len = 0;
     
           uint8_t   request= rq->bRequest;
