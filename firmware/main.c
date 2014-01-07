@@ -73,7 +73,22 @@ void ws2812_sendarray_mask(void)
     len = USB_PROP_LENGTH(cfgProp);         \
     usbMsgPtr = (usbMsgPtr_t)(staticName);  \
   }
+
+
+#define STS(mem,in) \
+    asm volatile ("sts %0,%1"  : : "i" (&mem), "r" (in) :  "memory" );
+
+#ifdef __AVR_ATtiny10__
+#define STS_Zero(mem) \
+    asm volatile ("sts %0,R17"  : : "i" (&mem) :  "memory" );
+#else
+#define STS_Zero(mem) \
+    asm volatile ("sts %0,R1"  : : "i" (&mem) :  "memory" );
+#endif
     
+#define LDS(out,mem) \
+    asm volatile ("lds %0,%1"  : "=d" (out) : "i" (&mem));
+  
 /* ------------------------------------------------------------------------ */
 void USB_INTR_VECTOR(void); 
 int main(void) __attribute__((__noreturn__));
@@ -126,11 +141,13 @@ int main(void) {
        */
      
         usbMsgLen_t replyLen;
-        usbTxBuf[0] = USBPID_DATA0;         /* initialize data toggling */
+//        usbTxBuf[0] = USBPID_DATA0;         /* initialize data toggling */
+        STS(usbTxBuf[0], USBPID_DATA0);         /* initialize data toggling */
     //  usbTxLen = USBPID_NAK;              /* abort pending transmit */
-        uint8_t   type = rq->bmRequestType & USBRQ_TYPE_MASK;
-        uint8_t   request= rq->bRequest;
-        if(type != USBRQ_TYPE_STANDARD){  // All nonstandard setup-requests are updating the LED
+        uint8_t   type;     LDS(type,    rq->bmRequestType);
+        uint8_t   request;  LDS(request, rq->bRequest);
+        
+        if ((type & USBRQ_TYPE_MASK) != USBRQ_TYPE_STANDARD){  // All nonstandard setup-requests are updating the LED
           if (request == 34) { // little-wire version reply
             usbMsgPtr = (usbMsgPtr_t)(&usbDescriptorDevice[12]); // Version from usb descriptor
             replyLen=1;          
@@ -142,10 +159,13 @@ int main(void) {
         }else{   // standard requests are handled by driver 
 
           usbMsgLen_t len = 0;
-    
+/*    
           uint8_t   request= rq->bRequest;
           uint8_t   value0 = rq->wValue.bytes[0];
           uint8_t   value1 = rq->wValue.bytes[1];
+  */        
+          uint8_t value0;     LDS(value0,rq->wValue.bytes[0]); 
+          uint8_t value1;     LDS(value1,rq->wValue.bytes[1]); 
           
               SWITCH_START(request)
               SWITCH_CASE(USBRQ_GET_STATUS)           /* 0 */
@@ -177,11 +197,14 @@ int main(void) {
               SWITCH_DEFAULT                          /* 7=SET_DESCRIPTOR, 12=SYNC_FRAME */
               SWITCH_END
             replyLen=len;
-          if(replyLen > rq->wLength.bytes[0])   
-              replyLen = rq->wLength.bytes[0];
+
+          uint8_t requestLen; LDS(requestLen,rq->wLength.bytes[0]);          
+          if(replyLen > requestLen)   
+              replyLen = requestLen;
         }
         usbMsgLen = replyLen;
-        usbRxLen = 0;       /* mark rx buffer as available */
+        //usbRxLen = 0;       /* mark rx buffer as available */
+        STS_Zero(usbRxLen);
     }    
  //   if(usbTxLen & 0x10)   // transmit system is always idle in polled mode
     { usbMsgLen_t wantLen=USBPID_NAK;
@@ -224,8 +247,9 @@ int main(void) {
             while (i--)  // don't bother app with 0 sized reads 
             { 
 #ifdef __AVR_ATtiny10__               
-                uint8_t *flashbase=(uint8_t*)0x4000+r;
-                c = *flashbase; 
+//                uint8_t *flashbase=(uint8_t*)0x4000+r;
+//               c = *flashbase; 
+                asm volatile (" ldi r27,0x40 \n\t ld %0,x"  : "=d" (c) : "x" (r));
 #else
                 c = USB_READ_FLASH(r);    // assign to char size variable to enforce byte ops 
 #endif                
@@ -240,7 +264,8 @@ int main(void) {
           wantLen += 4;           /* length including sync byte */
 
         }
-      usbTxLen = wantLen;
+        STS(usbTxLen, wantLen);   
+      //usbTxLen = wantLen;
     }    
         if (USB_INTR_PENDING & (1<<USB_INTR_PENDING_BIT))  // Usbpoll() collided with data packet
        {        
