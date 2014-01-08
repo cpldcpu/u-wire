@@ -17,7 +17,8 @@ Next step: Design hardware.
  * All SETUP packets that are not system request are forwarded to a WS2812 RGB LED on PB0.
  
 ### Memory usage ###
-  * 1020 bytes Flash
+  * 1020 bytes Flash - Now down to 988 bytes with STS/LDS workaround.
+    + Leaves 36 bytes of flash for addtional functionality!
   * SRAM:
     + 28 bytes static variables
     + 2 bytes return stack 
