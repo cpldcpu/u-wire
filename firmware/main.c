@@ -26,7 +26,6 @@
 #define __DELAY_BACKWARD_COMPATIBLE__  
 
 /* ------------------------------------------------------------------------ */
-static uint8_t usbFunctionSetup(uint8_t data[8]);
 
 #define ws2812_port PORTB		// Data port register
 

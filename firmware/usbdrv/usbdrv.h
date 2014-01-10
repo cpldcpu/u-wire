@@ -175,13 +175,13 @@ USB messages, even if they address another (low-speed) device on the same bus.
 
 struct usbRequest;  /* forward declaration */
 
-USB_PUBLIC void usbInit(void);
+//USB_PUBLIC void usbInit(void);
 /* This function must be called before interrupts are enabled and the main
  * loop is entered. We exepct that the PORT and DDR bits for D+ and D- have
  * not been changed from their default status (which is 0). If you have changed
  * them, set both back to 0 (configure them as input with no internal pull-up).
  */
-USB_PUBLIC void usbPoll(void);
+//USB_PUBLIC void usbPoll(void);
 /* This function must be called at regular intervals from the main loop.
  * Maximum delay between calls is somewhat less than 50ms (USB timeout for
  * accepting a Setup message). Otherwise the device will not be recognized.
@@ -193,7 +193,7 @@ extern usbMsgPtr_t usbMsgPtr;
  * implementation of usbFunctionWrite(). It is also used internally by the
  * driver for standard control requests.
  */
-USB_PUBLIC usbMsgLen_t usbFunctionSetup(uchar data[8]);
+//USB_PUBLIC usbMsgLen_t usbFunctionSetup(uchar data[8]);
 /* This function is called when the driver receives a SETUP transaction from
  * the host which is not answered by the driver itself (in practice: class and
  * vendor requests). All control transfers start with a SETUP transaction where
@@ -220,7 +220,7 @@ USB_PUBLIC usbMsgLen_t usbFunctionSetup(uchar data[8]);
  * Note that calls to the functions usbFunctionRead() and usbFunctionWrite()
  * are only done if enabled by the configuration in usbconfig.h.
  */
-USB_PUBLIC usbMsgLen_t usbFunctionDescriptor(struct usbRequest *rq);
+//USB_PUBLIC usbMsgLen_t usbFunctionDescriptor(struct usbRequest *rq);
 /* You need to implement this function ONLY if you provide USB descriptors at
  * runtime (which is an expert feature). It is very similar to
  * usbFunctionSetup() above, but it is called only to request USB descriptor

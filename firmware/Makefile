@@ -15,7 +15,7 @@
 #     make disablereset		# for ATtiny85 target - to use external reset line for IO (CAUTION: this is not easy to enable again, see README) 
 
 F_CPU = 12000000
-DEVICE = attiny85
+DEVICE = attiny10
 FUSEOPT = $(FUSEOPT_t85)
 LOCKOPT = -U lock:w:0x2f:m
 
@@ -145,6 +145,7 @@ DEFINES =
 # 
 CFLAGS = -g2 -nostartfiles -ffunction-sections -fdata-sections -fpack-struct -Wall -Os  -fno-inline-small-functions -fno-move-loop-invariants -fno-tree-scev-cprop  -I. -mmcu=$(DEVICE) -DF_CPU=$(F_CPU) $(DEFINES)
 LDFLAGS = -Wl,--relax,--section-start=.text=0,-Map=main.map
+
 
 
 OBJECTS =  crt1.o usbdrv/usbdrvasm.o usbdrv/oddebug.o main.o 
