@@ -143,7 +143,10 @@ CC = avr-gcc
 DEFINES = 
 # Remove the -fno-* options when you use gcc 3, it does not understand them
 # 
-CFLAGS = -g2 -nostartfiles -ffunction-sections -fdata-sections -fpack-struct -Wall -Os  -fno-inline-small-functions -fno-move-loop-invariants -fno-tree-scev-cprop  -I. -mmcu=$(DEVICE) -DF_CPU=$(F_CPU) $(DEFINES)
+CFLAGS = -g2 -nostartfiles -I. -mmcu=$(DEVICE) -DF_CPU=$(F_CPU) $(DEFINES)
+CFLAGS+= -Os -ffunction-sections -fdata-sections -fpack-struct -fno-move-loop-invariants -fno-tree-scev-cprop -fno-inline-small-functions  
+CFLAGS+= -Wall -Wno-pointer-to-int-cast
+
 LDFLAGS = -Wl,--relax,--section-start=.text=0,-Map=main.map
 
 
