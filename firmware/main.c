@@ -25,11 +25,12 @@
 // Use the old delay routines without NOP padding. This saves memory.
 #define __DELAY_BACKWARD_COMPATIBLE__  
 
+    
 /* ------------------------------------------------------------------------ */
 
 #define ws2812_port PORTB		// Data port register
 
-void ws2812_sendarray_mask(void)
+static  void  ws2812_sendarray_mask(void)
 {
   uint8_t curbyte=0,ctr,masklo,maskhi=ws2812_mask;
   masklo=~maskhi;
@@ -105,12 +106,7 @@ int main(void) {
 
   usbTxLen = USBPID_NAK;
   usbMsgLen = USB_NO_MSG;
-  #if USB_INTR_CFG_SET != 0
   USB_INTR_CFG |= USB_INTR_CFG_SET;
-  #endif
-  #if USB_INTR_CFG_CLR != 0
-  USB_INTR_CFG &= ~(USB_INTR_CFG_CLR);
-  #endif
   USB_INTR_ENABLE |= (1 << USB_INTR_ENABLE_BIT);
     
   DDRB|=ws2812_mask;
@@ -131,6 +127,7 @@ int main(void) {
     if(len >= 0){
      uint8_t *data=(uint8_t *)usbRxBuf + 1 ;
       usbRequest_t    *rq = (void *)data;   
+      
       /* usbRxToken can be:
        * 0x2d 00101101 (USBPID_SETUP for setup data)
        * 0xe1 11100001 (USBPID_OUT: data phase of setup transfer)
@@ -170,7 +167,8 @@ int main(void) {
               SWITCH_CASE(USBRQ_GET_STATUS)           /* 0 */
                   len = 2;
               SWITCH_CASE(USBRQ_SET_ADDRESS)          /* 5 */
-                  usbNewDeviceAddr = value0;
+//                  usbNewDeviceAddr = value0;
+                  STS(usbNewDeviceAddr,value0);
               SWITCH_CASE(USBRQ_GET_DESCRIPTOR)       /* 6 */
                 SWITCH_START(value1)
                 SWITCH_CASE(USBDESCR_DEVICE)    /* 1 */
@@ -260,6 +258,7 @@ int main(void) {
           usbMsgPtr += wantLen;            
           
           usbCrc16Append(&usbTxBuf[1], wantLen);
+
           wantLen += 4;           /* length including sync byte */
 
         }
