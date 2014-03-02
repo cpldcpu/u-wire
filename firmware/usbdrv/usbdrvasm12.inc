@@ -5,6 +5,8 @@
  * Tabsize: 4
  * Copyright: (c) 2007 by OBJECTIVE DEVELOPMENT Software GmbH
  * License: GNU GPL v2 (see License.txt), GNU GPL v3 or proprietary (CommercialLicense.txt)
+ * 
+ * Heavily modified to be compatible with ATtiny10 - cpldcpu Jan 2014
  */
 
 /* Do not link this file! Link usbdrvasm.S instead, which includes the

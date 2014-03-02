@@ -2,9 +2,18 @@
  * µ-wire
  * cpldcpu Jan 2014
  * 
- * Smallest possible USB compliant device based on V-USB
+ * Smallest possible USB compliant device based on V-USB.
+ * Drives a single WS2812 LED using the little-wire protocol.
  *
  * (Uses little-wire host-code and a stripped down micronucleus)
+ *
+ * Works only on ATtiny 10
+ *
+ * Connections: 
+ * PB0:  Data output for WS2812 LED
+ * PB1:  USB D-
+ * PB2:  USB D+
+ *
  */
  
 #include <avr/io.h>
