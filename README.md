@@ -6,9 +6,12 @@ to control a single WS2812 LED via USB.
 
 The source started out as an amalganation of micronucleus and littlewire. All excess functionality was cut away.
 
-Update 2014-01-07: It actually works on a ATtiny 10 now, yay! It still suffers from AVR-GCCs inability to generate proper 16 bit STS/LDS. Ticket to Atmel was submitted, let's see if they fix it.
+Update 2014-01-07: 
+ - It actually works on a ATtiny 10 now, yay! It still suffers from AVR-GCCs inability to generate proper 16 bit STS/LDS. Ticket to Atmel was submitted, let's see if they fix it.
 
-Next step: Design hardware.
+Update 2014-03-19: 
+ - I published a more detailed write-up of the project [here](http://cpldcpu.wordpress.com/2014/03/19/%c2%b5-wire-usb-on-an-attiny-10/).
+ - Custom PCB design is finished and ordered.
 
 ### Features ###
  * Enumeration.
