@@ -5,7 +5,22 @@
  * Smallest possible USB compliant device based on V-USB.
  * Drives a single WS2812 LED using the little-wire protocol.
  *
- * (Uses little-wire host-code and a stripped down micronucleus)
+ * Copyright (C) 2014 T. Bo"scke
+ *
+ * This program is free software: you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License as published by
+ * the Free Software Foundation, either version 3 of the License, or
+ * (at your option) any later version.
+ * 
+ * This program is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU General Public License for more details.
+ *
+ * You should have received a copy of the GNU General Public License
+ * along with this program.  If not, see <http://www.gnu.org/licenses/>.
+ *  
+ * --------------------------------------------------------------------------
  *
  * Works only on ATtiny 10
  *
@@ -13,8 +28,18 @@
  * PB0:  Data output for WS2812 LED
  * PB1:  USB D-
  * PB2:  USB D+
+ 
+ * New Connections: 
+ * PB2:  Data output for WS2812 LED
+ * PB0:  USB D-
+ * PB1:  USB D+
+ 
  *
  */
+ 
+// WS2812 Pin
+ 
+#define ws2812_mask _BV(PB2)
  
 #include <avr/io.h>
 #include <avr/pgmspace.h>
@@ -23,8 +48,6 @@
 #define usbMsgPtr_t uint8_t
 
 #include "usbdrv/usbdrv.c"
-
-#define ws2812_mask _BV(PB0)
 
 // Definition of sei and cli without memory barrier keyword to prevent reloading of memory variables
 #define sei() asm volatile("sei")

@@ -84,8 +84,8 @@ these macros are defined, the boot loader uses them.
 #elif __AVR_ATtiny10__
 
 #define USB_CFG_IOPORTNAME      B
-#define USB_CFG_DMINUS_BIT      1
-#define USB_CFG_DPLUS_BIT       2
+#define USB_CFG_DMINUS_BIT      0
+#define USB_CFG_DPLUS_BIT       1
 
 #define USB_INTR_CFG            PCMSK
 #define USB_INTR_CFG_SET        (1 << USB_CFG_DPLUS_BIT)
