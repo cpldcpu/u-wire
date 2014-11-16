@@ -28,6 +28,15 @@ Update 2014-03-19:
     + 2 bytes free
   * Uses only regs R16-R31
  
+### License ###
+
+This design is [open source hardware](http://www.oshwa.org/definition/) shared under GPL V3. 
+
+Parts of this design are derived from [http://www.littlewire.cc](http://www.littlewire.cc "Little-Wire") and [V-USB](http://www.obdev.at/products/vusb/index-de.html).
+
+Please honour the license by publishing the design files of derived designs and attributing the original work by linking back to the [original repository.
+](https://github.com/cpldcpu/u-wire)
+
 ## Test set up ##
 ![Front](u-wire-test.jpg)
 
